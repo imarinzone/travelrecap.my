@@ -13,7 +13,6 @@ A single-page static website that recreates the Google Timeline 2024 update inte
 - **City & Place Highlights**: Visual gallery of visited cities and places
 - **Trip Highlights**: Recent trip information with dates
 - **All-Time Data**: Comprehensive statistics across all your travels
-
 ## Project Structure
 
 ```
