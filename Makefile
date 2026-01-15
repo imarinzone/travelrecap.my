@@ -1,4 +1,4 @@
-.PHONY: help install up up-backend down restart logs logs-backend psql schema test import import-dry-run import-no-geocode clean build-backend
+.PHONY: help install up up-backend down restart logs logs-backend psql schema test import import-dry-run import-no-geocode clean build-backend swagger install-swag
 
 # Default target
 help:
@@ -18,6 +18,8 @@ help:
 	@echo ""
 	@echo "Backend:"
 	@echo "  make logs-backend     - View backend container logs"
+	@echo "  make swagger          - Generate Swagger API documentation"
+	@echo "  make install-swag    - Install swag CLI tool for Swagger generation"
 	@echo ""
 	@echo "Import:"
 	@echo "  make import           - Import visits with geocoding (full)"
@@ -66,6 +68,20 @@ logs:
 
 logs-backend:
 	docker-compose logs -f backend
+
+# Swagger documentation
+install-swag:
+	@echo "Installing swag CLI tool (v1.8.1 to match library version)..."
+	@go install github.com/swaggo/swag/cmd/swag@v1.8.1
+	@echo "✓ swag v1.8.1 installed/updated"
+
+swagger: install-swag
+	@echo "Generating Swagger documentation..."
+	@echo "Downloading Go module dependencies..."
+	@cd backend && go mod download && go mod tidy
+	@echo "Generating Swagger docs..."
+	@cd backend && swag init -g main.go -o docs --parseDependency --parseInternal
+	@echo "✓ Swagger documentation generated in backend/docs/"
 
 # Database connection
 psql:

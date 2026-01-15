@@ -6,6 +6,7 @@ COPY go.mod ./
 RUN go mod download
 
 COPY main.go ./
+COPY docs/ ./docs/
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server
 
@@ -20,4 +21,5 @@ COPY --from=builder /app/server .
 EXPOSE 8080
 
 CMD ["./server"]
+
 

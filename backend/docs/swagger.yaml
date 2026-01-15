@@ -1,0 +1,58 @@
+basePath: /
+definitions:
+  main.PlaceLocation:
+    properties:
+      city:
+        type: string
+      country:
+        type: string
+      lat:
+        type: number
+      lng:
+        type: number
+      place_id:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API for retrieving travel location data filtered by year
+  title: Travel Recap API
+  version: "1.0"
+paths:
+  /api/place-locations:
+    get:
+      consumes:
+      - application/json
+      description: Get place locations, optionally filtered by year. If year is not
+        provided, returns all locations.
+      parameters:
+      - description: Filter locations by year (e.g., 2023)
+        in: query
+        name: year
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of place locations
+          schema:
+            items:
+              $ref: '#/definitions/main.PlaceLocation'
+            type: array
+        "400":
+          description: Invalid year parameter
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Database error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get place locations
+      tags:
+      - locations
+swagger: "2.0"

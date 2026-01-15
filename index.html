@@ -17,6 +17,57 @@
         body {
             font-family: 'Roboto', sans-serif;
         }
+        /* Fullscreen map styles - takes entire display */
+        section:fullscreen,
+        section:-webkit-full-screen,
+        section:-moz-full-screen,
+        section:-ms-fullscreen {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            background: white;
+            display: flex !important;
+            flex-direction: column !important;
+            z-index: 9999 !important;
+            border: none !important;
+            border-radius: 0 !important;
+        }
+        section:fullscreen .p-4,
+        section:-webkit-full-screen .p-4,
+        section:-moz-full-screen .p-4,
+        section:-ms-fullscreen .p-4 {
+            padding: 1rem !important;
+            flex-shrink: 0;
+            margin: 0 !important;
+        }
+        section:fullscreen #map-container-wrapper,
+        section:-webkit-full-screen #map-container-wrapper,
+        section:-moz-full-screen #map-container-wrapper,
+        section:-ms-fullscreen #map-container-wrapper {
+            flex: 1 !important;
+            width: 100% !important;
+            height: 100% !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        section:fullscreen #map,
+        section:-webkit-full-screen #map,
+        section:-moz-full-screen #map,
+        section:-ms-fullscreen #map {
+            height: 100% !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -52,17 +103,27 @@
             <div class="p-4 border-b border-gray-200">
                 <div class="flex items-center justify-between mb-2">
                     <h2 class="text-lg font-medium text-gray-900">Interactive Map</h2>
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 items-center">
+                        <label for="map-year-filter" class="text-sm text-gray-700 mr-2">Year:</label>
+                        <select id="map-year-filter" class="px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                            <option value="">All Years</option>
+                        </select>
                         <button id="map-style-light" class="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">
                             Light
                         </button>
                         <button id="map-style-dark" class="px-4 py-2 text-sm font-medium rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
                             Dark
                         </button>
+                        <button id="map-fullscreen" class="px-4 py-2 text-sm font-medium rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors" title="Toggle fullscreen">
+                            <span id="fullscreen-icon">⛶</span>
+                            <span id="fullscreen-text" class="ml-1 hidden sm:inline">Fullscreen</span>
+                        </button>
                     </div>
                 </div>
             </div>
-            <div id="map" class="w-full h-96"></div>
+            <div id="map-container-wrapper" class="relative">
+                <div id="map" class="w-full h-[600px]"></div>
+            </div>
         </section>
 
         <!-- Statistics Section -->
@@ -170,4 +231,5 @@
     <script src="script.js"></script>
 </body>
 </html>
+
 
