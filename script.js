@@ -4,8 +4,7 @@ let markers = null;
 let currentStyle = 'light';
 let selectedYear = null;
 let allLocations = []; // Store loaded locations for filtering
-
-// CartoDB Tile Layer URLs
+let allSegments = []; // Store all timeline segments (visits and activities)
 
 // CartoDB Tile Layer URLs
 const tileLayers = {
@@ -46,38 +45,617 @@ function initMap() {
     map.addLayer(markers);
 
     // Initialize year dropdown
-    initializeYearFilter();
+    initializeYearFilter([]);
 
     // Load saved year preference
     const savedYear = localStorage.getItem('mapYear');
     if (savedYear) {
-        document.getElementById('map-year-filter').value = savedYear;
         selectedYear = savedYear === '' ? null : savedYear;
     }
 
     // Setup fullscreen listeners
     setupFullscreenListeners();
-
-    // Load place locations
-    loadPlaceLocations();
 }
 
 // Initialize year filter dropdown
-function initializeYearFilter() {
+function initializeYearFilter(availableYears) {
     const yearSelect = document.getElementById('map-year-filter');
-    const currentYear = new Date().getFullYear();
-    const startYear = 2020; // Adjust as needed
+    yearSelect.innerHTML = '<option value="">All Years</option>';
 
-    // Generate year options (from startYear to currentYear, descending)
-    for (let year = currentYear; year >= startYear; year--) {
+    // Sort years descending
+    availableYears.sort((a, b) => b - a);
+
+    availableYears.forEach(year => {
         const option = document.createElement('option');
         option.value = year;
         option.textContent = year;
+        if (selectedYear && parseInt(selectedYear) === year) {
+            option.selected = true;
+        }
         yearSelect.appendChild(option);
+    });
+
+    // If we have years and no selected year (or invalid one), select the most recent one
+    if (availableYears.length > 0 && (!selectedYear || !availableYears.includes(parseInt(selectedYear)))) {
+        selectedYear = availableYears[0];
+        yearSelect.value = selectedYear;
+        localStorage.setItem('mapYear', selectedYear);
+
+        // Update title to reflect year
+        document.getElementById('header-title').textContent = `Im, here's your ${selectedYear} Timeline update`;
     }
 }
 
-// Render markers based on current data and filters
+// Handle file upload
+function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        return;
+    }
+
+    const statusSpan = document.getElementById('upload-status');
+    statusSpan.textContent = 'Parsing...';
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const json = JSON.parse(e.target.result);
+            processTimelineData(json);
+            statusSpan.textContent = `Loaded data successfully`;
+            statusSpan.className = 'text-sm font-medium text-green-600';
+        } catch (error) {
+            console.error('Error parsing JSON:', error);
+            statusSpan.textContent = 'Error parsing JSON file';
+            statusSpan.className = 'text-sm font-medium text-red-600';
+        }
+    };
+    reader.readAsText(file);
+}
+
+// Process Google Timeline JSON
+function processTimelineData(data) {
+    allSegments = data.semanticSegments || [];
+    allLocations = [];
+    const years = new Set();
+
+    // 1. Extract Locations and Years
+    allSegments.forEach(segment => {
+        // Collect Years
+        if (segment.startTime) {
+            const year = new Date(segment.startTime).getFullYear();
+            years.add(year);
+        }
+
+        // Collect Locations for Map
+        if (segment.visit) {
+            const visit = segment.visit;
+            if (visit.topCandidate && visit.topCandidate.placeLocation && visit.topCandidate.placeLocation.latLng) {
+                const latLngStr = visit.topCandidate.placeLocation.latLng;
+                const parts = latLngStr.replace(/°/g, '').split(',');
+                if (parts.length === 2) {
+                    const lat = parseFloat(parts[0].trim());
+                    const lng = parseFloat(parts[1].trim());
+
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        allLocations.push({
+                            lat: lat,
+                            lng: lng,
+                            startTime: segment.startTime,
+                            endTime: segment.endTime,
+                            address: visit.topCandidate.placeLocation.address,
+                            name: visit.topCandidate.placeLocation.name,
+                            probability: visit.probability,
+                            placeId: visit.topCandidate.placeId
+                        });
+                    }
+                }
+            }
+        }
+    });
+
+    console.log(`Parsed ${allLocations.length} locations`);
+
+    // 2. Initialize UI with data
+    initializeYearFilter(Array.from(years));
+    renderDashboard();
+}
+
+// Main render function that updates all sections based on selectedYear
+function renderDashboard() {
+    // 1. Render Map
+    renderMarkers();
+
+    // 2. Filter data for statistics
+    const currentYear = selectedYear ? parseInt(selectedYear) : null;
+    let statsSegments = allSegments;
+
+    if (currentYear) {
+        statsSegments = allSegments.filter(s => {
+            if (!s.startTime) return false;
+            return new Date(s.startTime).getFullYear() === currentYear;
+        });
+        document.getElementById('header-title').textContent = `Im, here's your ${currentYear} Timeline update`;
+    } else {
+        document.getElementById('header-title').textContent = `Im, here's your Timeline update`;
+    }
+
+    // 3. Calculate Stats
+    const stats = calculateStats(statsSegments);
+    const allTimeStats = calculateStats(allSegments);
+    const advancedStats = calculateAdvancedStats(statsSegments);
+
+    // 4. Update UI Sections
+    renderStatistics(stats);
+    renderTravelSummary(stats);
+    renderTravelTrends(stats.transport);
+    renderVisitTrends(stats.visits);
+    renderHighlights(stats.visits, statsSegments);
+    renderAllTimeStats(allTimeStats);
+
+    // 5. Render New Metrics
+    renderEcoImpact(advancedStats.eco);
+    renderTimeDistribution(advancedStats.time);
+    renderRecordBreakers(advancedStats.records);
+}
+
+// Calculate comprehensive statistics from segments
+function calculateStats(segments) {
+    const stats = {
+        totalDistanceMeters: 0,
+        totalVisits: 0,
+        countries: new Set(),
+        cities: new Set(),
+        transport: {}, // { type: { count, distanceMeters, durationMs } }
+        visits: {},    // { placeId: { name, count, location, address } }
+        visitTypes: {} // { type: count } e.g. "Restaurant": 10
+    };
+
+    segments.forEach(segment => {
+        // Activity Stats
+        if (segment.activity) {
+            const activity = segment.activity;
+            if (activity.distanceMeters) {
+                stats.totalDistanceMeters += activity.distanceMeters;
+            }
+
+            if (activity.topCandidate && activity.topCandidate.type) {
+                const type = activity.topCandidate.type;
+                if (!stats.transport[type]) {
+                    stats.transport[type] = { count: 0, distanceMeters: 0, durationMs: 0 };
+                }
+                stats.transport[type].count++;
+                if (activity.distanceMeters) stats.transport[type].distanceMeters += activity.distanceMeters;
+
+                const duration = new Date(segment.endTime) - new Date(segment.startTime);
+                stats.transport[type].durationMs += duration;
+            }
+        }
+
+        // Visit Stats
+        if (segment.visit) {
+            stats.totalVisits++;
+            const visit = segment.visit;
+
+            if (visit.topCandidate) {
+                const placeId = visit.topCandidate.placeId;
+                const name = visit.topCandidate.placeLocation?.name || "Unknown Place";
+                const address = visit.topCandidate.placeLocation?.address;
+
+                // Track Unique Cities/Countries (Heuristic based on address)
+                if (address) {
+                    extractLocationDetails(address, stats.cities, stats.countries);
+                }
+
+                if (!stats.visits[placeId]) {
+                    stats.visits[placeId] = {
+                        name: name,
+                        count: 0,
+                        address: address,
+                        latLng: visit.topCandidate.placeLocation?.latLng
+                    };
+                }
+                stats.visits[placeId].count++;
+            }
+        }
+    });
+
+    return stats;
+}
+
+function calculateAdvancedStats(segments) {
+    const stats = {
+        eco: { totalCo2: 0, breakdown: {} },
+        time: { moving: 0, stationary: 0, total: 0 },
+        records: { longestDrive: 0, longestWalk: 0, maxVelocity: 0 }
+    };
+
+    // CO2 Emission Factors (approx g/km)
+    const emissionFactors = {
+        'IN_PASSENGER_VEHICLE': 150,
+        'IN_VEHICLE': 150,
+        'IN_TAXI': 150,
+        'FLYING': 115,
+        'IN_BUS': 80,
+        'IN_TRAIN': 40,
+        'IN_SUBWAY': 40,
+        'WALKING': 0,
+        'RUNNING': 0,
+        'CYCLING': 0,
+        'MOTORCYCLING': 100
+    };
+
+    segments.forEach(segment => {
+        const duration = new Date(segment.endTime) - new Date(segment.startTime);
+        stats.time.total += duration;
+
+        if (segment.activity) {
+            stats.time.moving += duration;
+
+            const type = segment.activity.topCandidate?.type || 'UNKNOWN';
+            const distanceKm = (segment.activity.distanceMeters || 0) / 1000;
+
+            // Eco Calc
+            const factor = emissionFactors[type] || 0;
+            const co2 = distanceKm * factor;
+            stats.eco.totalCo2 += co2;
+            stats.eco.breakdown[type] = (stats.eco.breakdown[type] || 0) + co2;
+
+            // Records
+            if (segment.activity.distanceMeters) {
+                if ((type === 'IN_PASSENGER_VEHICLE' || type === 'IN_VEHICLE') && segment.activity.distanceMeters > stats.records.longestDrive) {
+                    stats.records.longestDrive = segment.activity.distanceMeters;
+                }
+                if ((type === 'WALKING' || type === 'RUNNING') && segment.activity.distanceMeters > stats.records.longestWalk) {
+                    stats.records.longestWalk = segment.activity.distanceMeters;
+                }
+            }
+        }
+        else if (segment.visit) {
+            stats.time.stationary += duration;
+        }
+    });
+
+    return stats;
+}
+
+function renderEcoImpact(ecoStats) {
+    const grid = document.getElementById('eco-impact-grid');
+    grid.innerHTML = '';
+
+    // Total CO2
+    const totalKg = Math.round(ecoStats.totalCo2 / 1000);
+    const treesNeeded = Math.ceil(totalKg / 25); // Approx 25kg CO2 per tree per year
+
+    grid.appendChild(createStatCard('Est. Carbon Footprint', `${totalKg} kg CO₂`, 'co2'));
+    grid.appendChild(createStatCard('Trees to Offset', `${treesNeeded} trees`, 'forest'));
+
+    // Top Emitter
+    let topEmitter = 'None';
+    let maxVal = 0;
+    for (const [type, val] of Object.entries(ecoStats.breakdown)) {
+        if (val > maxVal) {
+            maxVal = val;
+            topEmitter = type.replace('IN_', '').replace('_', ' ');
+        }
+    }
+    grid.appendChild(createStatCard('Primary Source', topEmitter, 'factory'));
+}
+
+function renderTimeDistribution(timeStats) {
+    const container = document.getElementById('time-distribution-stats');
+    container.innerHTML = '';
+
+    const totalHours = timeStats.total / (1000 * 60 * 60);
+    const movingHours = timeStats.moving / (1000 * 60 * 60);
+    const stationaryHours = timeStats.stationary / (1000 * 60 * 60);
+
+    const movingPct = Math.round((timeStats.moving / timeStats.total) * 100) || 0;
+    const stationaryPct = Math.round((timeStats.stationary / timeStats.total) * 100) || 0;
+
+    container.innerHTML = `
+        <div class="flex items-center justify-between">
+            <span class="text-gray-600">Stationary (Visits)</span>
+            <span class="font-bold relative group cursor-help">
+                ${stationaryPct}%
+                <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                    ${Math.round(stationaryHours)} hours
+                </span>
+            </span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+            <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${stationaryPct}%"></div>
+        </div>
+
+        <div class="flex items-center justify-between">
+            <span class="text-gray-600">On the Move (Travel)</span>
+             <span class="font-bold relative group cursor-help">
+                ${movingPct}%
+                 <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                    ${Math.round(movingHours)} hours
+                </span>
+            </span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div class="bg-green-500 h-2.5 rounded-full" style="width: ${movingPct}%"></div>
+        </div>
+    `;
+}
+
+function renderRecordBreakers(records) {
+    const container = document.getElementById('record-breakers-stats');
+    container.innerHTML = '';
+
+    const driveKm = (records.longestDrive / 1000).toFixed(1);
+    const walkKm = (records.longestWalk / 1000).toFixed(1);
+
+    container.innerHTML = `
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">🚗</span>
+                <div>
+                    <p class="text-sm text-gray-500">Longest Drive</p>
+                    <p class="font-bold text-gray-900">${driveKm} km</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">🚶</span>
+                <div>
+                    <p class="text-sm text-gray-500">Longest Walk</p>
+                    <p class="font-bold text-gray-900">${walkKm} km</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Heuristic to extract city and country from address strings
+function extractLocationDetails(address, citiesSet, countriesSet) {
+    const parts = address.split(',').map(p => p.trim());
+    if (parts.length > 0) {
+        countriesSet.add(parts[parts.length - 1]); // Last format is usually country
+    }
+    if (parts.length > 2) {
+        citiesSet.add(parts[parts.length - 3] || parts[parts.length - 2] || parts[0]);
+    }
+}
+
+function renderStatistics(stats) {
+    const grid = document.getElementById('statistics-grid');
+    grid.innerHTML = '';
+
+    // Total Distance
+    const distanceKm = Math.round(stats.totalDistanceMeters / 1000);
+    grid.appendChild(createStatCard('Total Distance', `${distanceKm.toLocaleString()} km`, 'commute'));
+
+    // Total Visits
+    grid.appendChild(createStatCard('Places Visited', stats.totalVisits.toLocaleString(), 'place'));
+
+    // Top City (Most visited)
+    // Always show Cities Visited even if 0, correctly reflecting data
+    grid.appendChild(createStatCard('Cities Visited', stats.cities.size.toLocaleString(), 'location_city'));
+}
+
+function createStatCard(title, value, iconName) {
+    const div = document.createElement('div');
+    div.className = 'bg-white p-6 rounded-lg shadow-sm border border-gray-100 flex items-center';
+    div.innerHTML = `
+        <div class="p-3 rounded-full bg-blue-50 text-blue-600 mr-4">
+            <span class="material-icons" style="font-size: 24px;">${iconName}</span> 
+            ${iconName === 'commute' ? '🚗' : iconName === 'place' ? '📍' : '🏙️'}
+        </div>
+        <div>
+            <p class="text-sm text-gray-500">${title}</p>
+            <p class="text-2xl font-bold text-gray-900">${value}</p>
+        </div>
+    `;
+    return div;
+}
+
+function renderTravelSummary(stats) {
+    const worldPercentage = document.getElementById('world-percentage');
+    const description = document.getElementById('travel-description');
+
+    if (stats.countries.size > 0) {
+        const coverage = Math.min((stats.countries.size / 195) * 100 * 5, 100).toFixed(1);
+        worldPercentage.textContent = `${coverage}%`;
+        const count = stats.countries.size;
+        const cityCount = stats.cities.size;
+        description.innerHTML = `
+            You've explored <strong>${count} countries</strong> and <strong>${cityCount} cities</strong>.<br>
+            Covering a total of <strong>${Math.round(stats.totalDistanceMeters / 1000).toLocaleString()} km</strong>.
+        `;
+    } else {
+        // Fallback when no country data
+        worldPercentage.textContent = '--%';
+        description.innerHTML = `
+            Covering a total of <strong>${Math.round(stats.totalDistanceMeters / 1000).toLocaleString()} km</strong>.<br>
+            <span class="text-xs text-gray-400">Location names missing from data source.</span>
+        `;
+    }
+}
+
+function renderTravelTrends(transportStats) {
+    const grid = document.getElementById('travel-trends-grid');
+    grid.innerHTML = '';
+
+    const sortedTransport = Object.entries(transportStats)
+        .sort(([, a], [, b]) => b.distanceMeters - a.distanceMeters)
+        .slice(0, 6);
+
+    sortedTransport.forEach(([type, data]) => {
+        const distanceKm = Math.round(data.distanceMeters / 1000);
+        const durationHours = Math.round(data.durationMs / (1000 * 60 * 60));
+
+        const card = document.createElement('div');
+        card.className = 'bg-gray-50 rounded-lg p-4';
+
+        let icon = '❓';
+        let label = type;
+
+        if (type === 'IN_PASSENGER_VEHICLE') { icon = '🚗'; label = 'Car'; }
+        else if (type === 'WALKING') { icon = '🚶'; label = 'Walking'; }
+        else if (type === 'IN_TRAIN') { icon = '🚆'; label = 'Train'; }
+        else if (type === 'IN_BUS') { icon = '🚌'; label = 'Bus'; }
+        else if (type === 'FLYING') { icon = '✈️'; label = 'Flying'; }
+        else if (type === 'CYCLING') { icon = '🚴'; label = 'Cycling'; }
+        else if (type === 'MOTORCYCLING') { icon = '🏍️'; label = 'Motorbike'; }
+
+        card.innerHTML = `
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-lg font-bold text-gray-700">${label}</span>
+                <span class="text-2xl">${icon}</span>
+            </div>
+            <div class="space-y-1">
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-500">Distance</span>
+                    <span class="font-medium">${distanceKm.toLocaleString()} km</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-500">Time</span>
+                    <span class="font-medium">${durationHours} hrs</span>
+                </div>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+function renderVisitTrends(visitStats) {
+    const grid = document.getElementById('visit-trends-grid');
+    grid.innerHTML = '';
+
+    // Check if we have named visits
+    const namedVisits = Object.values(visitStats).filter(p => p.name !== "Unknown Place");
+
+    if (namedVisits.length === 0) {
+        // Show specific message if no names
+        grid.innerHTML = `
+            <div class="col-span-2 text-center p-6 text-gray-500">
+                <p>Visit types could not be determined from the loaded data.</p>
+            </div>
+         `;
+        return;
+    }
+
+    const sortedVisits = namedVisits
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 4);
+
+    sortedVisits.forEach(place => {
+        const card = document.createElement('div');
+        card.className = 'bg-gray-50 rounded-lg p-4 flex items-center justify-between';
+
+        card.innerHTML = `
+            <div>
+                <p class="font-medium text-gray-900 truncate w-48" title="${place.name}">${place.name}</p>
+                <p class="text-xs text-gray-500 truncate w-48">${place.address || ''}</p>
+            </div>
+            <div class="flex flex-col items-end">
+                <span class="text-2xl font-bold text-blue-600">${place.count}</span>
+                <span class="text-xs text-gray-500">visits</span>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+function renderHighlights(visitStats, segments) {
+    // 1. Places Highlights (Top visited)
+    const placesGrid = document.getElementById('places-grid');
+    placesGrid.innerHTML = '';
+
+    const topPlaces = Object.values(visitStats)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 4);
+
+    // If no places have names (heuristic: all names are "Unknown Place"), hide the section
+    const hasNames = topPlaces.some(p => p.name !== "Unknown Place");
+
+    if (hasNames) {
+        topPlaces.forEach(place => {
+            const card = document.createElement('div');
+            card.className = 'bg-white border border-gray-100 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow';
+            card.innerHTML = `
+                 <div class="w-full h-32 bg-gray-100 rounded-md mb-3 flex items-center justify-center text-gray-300">
+                    <span class="text-4xl">📍</span>
+                </div>
+                <h3 class="font-medium text-gray-900 mb-1 truncate" title="${place.name}">${place.name}</h3>
+                <p class="text-sm text-gray-500">${place.count} visits</p>
+                <p class="text-xs text-gray-400">${place.latLng ? place.latLng : ''}</p>
+            `;
+            placesGrid.appendChild(card);
+        });
+        placesGrid.closest('section').style.display = 'block';
+    } else {
+        placesGrid.closest('section').style.display = 'none';
+    }
+
+    // 2. Cities Highlights
+    const citiesGrid = document.getElementById('cities-grid');
+    citiesGrid.innerHTML = '';
+
+    const cityCounts = {};
+    Object.values(visitStats).forEach(place => {
+        if (place.address) {
+            const parts = place.address.split(',').map(p => p.trim());
+            if (parts.length >= 3) {
+                const city = parts[parts.length - 3] || parts[parts.length - 2];
+                cityCounts[city] = (cityCounts[city] || 0) + place.count;
+            }
+        }
+    });
+
+    const topCities = Object.entries(cityCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 3);
+
+    if (topCities.length > 0) {
+        topCities.forEach(([city, count]) => {
+            const card = document.createElement('div');
+            card.className = 'bg-white border border-gray-100 rounded-lg p-4 shadow-sm';
+            card.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-purple-50 text-purple-600 rounded-lg">
+                        🏙️
+                    </div>
+                    <div>
+                        <h3 class="font-medium text-gray-900">${city}</h3>
+                        <p class="text-xs text-gray-500">${count} places visited</p>
+                    </div>
+                </div>
+            `;
+            citiesGrid.appendChild(card);
+        });
+        citiesGrid.closest('section').style.display = 'block';
+    } else {
+        citiesGrid.closest('section').style.display = 'none';
+    }
+}
+
+function renderAllTimeStats(stats) {
+    const container = document.getElementById('all-time-stats');
+    container.innerHTML = '';
+
+    const statsData = [
+        { label: 'Total Distance', value: Math.round(stats.totalDistanceMeters / 1000).toLocaleString() + ' km' },
+        { label: 'Total Visits', value: stats.totalVisits.toLocaleString() },
+        { label: 'Countries', value: stats.countries.size.toLocaleString() }
+    ];
+
+    statsData.forEach(stat => {
+        const div = document.createElement('div');
+        div.innerHTML = `
+            <p class="text-3xl font-bold text-gray-900 mb-1">${stat.value}</p>
+            <p class="text-sm text-gray-600 uppercase tracking-wide">${stat.label}</p>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// Helper: Render map markers (from previous implementation, slightly adjusted)
 function renderMarkers() {
     // Clear existing markers
     markers.clearLayers();
@@ -128,76 +706,6 @@ function renderMarkers() {
     });
 
     console.log(`Rendered ${filteredLocations.length} markers`);
-}
-
-// Handle file upload
-function handleFileUpload(event) {
-    const file = event.target.files[0];
-    if (!file) {
-        return;
-    }
-
-    const statusSpan = document.getElementById('upload-status');
-    statusSpan.textContent = 'Parsing...';
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            const json = JSON.parse(e.target.result);
-            processTimelineData(json);
-            statusSpan.textContent = `Loaded ${allLocations.length} visits`;
-            statusSpan.className = 'text-sm font-medium text-green-600';
-        } catch (error) {
-            console.error('Error parsing JSON:', error);
-            statusSpan.textContent = 'Error parsing JSON file';
-            statusSpan.className = 'text-sm font-medium text-red-600';
-        }
-    };
-    reader.readAsText(file);
-}
-
-// Process Google Timeline JSON
-function processTimelineData(data) {
-    allLocations = [];
-    const segments = data.semanticSegments || [];
-
-    segments.forEach(segment => {
-        if (segment.visit) {
-            const visit = segment.visit;
-            if (visit.topCandidate && visit.topCandidate.placeLocation && visit.topCandidate.placeLocation.latLng) {
-                const latLngStr = visit.topCandidate.placeLocation.latLng;
-                // Parse "lat°, lng°" format
-                const parts = latLngStr.replace(/°/g, '').split(',');
-                if (parts.length === 2) {
-                    const lat = parseFloat(parts[0].trim());
-                    const lng = parseFloat(parts[1].trim());
-
-                    if (!isNaN(lat) && !isNaN(lng)) {
-                        allLocations.push({
-                            lat: lat,
-                            lng: lng,
-                            startTime: segment.startTime, // Keep start time for filtering
-                            // metadata we can extract
-                            address: visit.topCandidate.placeLocation.address,
-                            name: visit.topCandidate.placeLocation.name,
-                            probability: visit.probability
-                        });
-                    }
-                }
-            }
-        }
-    });
-
-    console.log(`Parsed ${allLocations.length} locations`);
-    renderMarkers();
-    initializeYearFilter(); // Re-initialize years based on data if we wanted to be dynamic, but static is fine for now
-}
-
-// Load place locations - REPLACED BY FILE UPLOAD
-function loadPlaceLocations() {
-    // Initial load does nothing now, waiting for file upload
-    const mapDiv = document.getElementById('map');
-    // Optional: Add a "Waiting for data" overlay or similar if needed
 }
 
 // Build popup content for marker
@@ -279,7 +787,8 @@ function onYearFilterChange() {
     const yearSelect = document.getElementById('map-year-filter');
     selectedYear = yearSelect.value === '' ? null : yearSelect.value;
     localStorage.setItem('mapYear', yearSelect.value);
-    renderMarkers();
+
+    renderDashboard();
 }
 
 // Toggle fullscreen
@@ -376,4 +885,3 @@ if (document.readyState === 'loading') {
         fileInput.addEventListener('change', handleFileUpload);
     }
 }
-
