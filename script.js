@@ -11,12 +11,14 @@ const tileLayers = {
     light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         attribution: '© OpenStreetMap contributors © CARTO',
         subdomains: 'abcd',
-        maxZoom: 19
+        maxZoom: 19,
+        crossOrigin: true
     }),
     dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         attribution: '© OpenStreetMap contributors © CARTO',
         subdomains: 'abcd',
-        maxZoom: 19
+        maxZoom: 19,
+        crossOrigin: true
     })
 };
 
@@ -125,6 +127,15 @@ function processAndRenderData(json) {
 
     // Initialize UI with data
     initializeYearFilter(years);
+
+    // Auto-select the latest year (first in the sorted list)
+    if (years.length > 0) {
+        selectedYear = years[0];
+        localStorage.setItem('mapYear', selectedYear);
+        const yearSelect = document.getElementById('map-year-filter');
+        if (yearSelect) yearSelect.value = selectedYear;
+    }
+
     renderDashboard();
 }
 
@@ -294,19 +305,60 @@ function renderStatistics(stats) {
 
 function createStatCard(title, value, iconName) {
     const div = document.createElement('div');
-    div.className = 'bg-white p-6 rounded-lg shadow-sm border border-gray-100 flex items-center';
+    // Glass styling for stat cards
+    div.className = 'glass rounded-2xl p-6 shadow-sm flex items-center transform hover:scale-105 transition-transform duration-300';
     div.innerHTML = `
-        <div class="p-3 rounded-full bg-blue-50 text-blue-600 mr-4">
-            <span class="material-icons" style="font-size: 24px;">${iconName}</span> 
+        <div class="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600 mr-4 shadow-inner">
+            <span class="material-icons" style="font-size: 28px;">${iconName}</span> 
             ${iconName === 'commute' ? '🚗' : iconName === 'place' ? '📍' : '🏙️'}
         </div>
         <div>
-            <p class="text-sm text-gray-500">${title}</p>
-            <p class="text-2xl font-bold text-gray-900">${value}</p>
+            <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">${title}</p>
+            <p class="text-3xl font-bold text-gray-900">${value}</p>
         </div>
     `;
     return div;
 }
+
+// Share Card Functionality
+window.shareCard = function (elementId) {
+    const node = document.getElementById(elementId);
+    if (!node) return;
+
+    const btn = node.querySelector('button[onclick^="shareCard"]');
+    const originalContent = btn ? btn.innerHTML : '';
+    if (btn) btn.innerHTML = '<span>⏳ Generating...</span>';
+
+    // Temporary style adjustments for better capture
+    const originalTransform = node.style.transform;
+    node.style.transform = 'none';
+
+    htmlToImage.toPng(node, {
+        backgroundColor: '#f5f7fa', // Light background for the image
+        pixelRatio: 2, // High resolution
+        style: {
+            margin: '0',
+            transform: 'none'
+        }
+    })
+        .then(function (dataUrl) {
+            const link = document.createElement('a');
+            link.download = `travel-recap-${new Date().getTime()}.png`;
+            link.href = dataUrl;
+            link.click();
+
+            if (btn) btn.innerHTML = '<span>✅ Saved!</span>';
+            setTimeout(() => { if (btn) btn.innerHTML = originalContent; }, 2000);
+        })
+        .catch(function (error) {
+            console.error('Error generating image:', error);
+            if (btn) btn.innerHTML = '<span>❌ Error</span>';
+            setTimeout(() => { if (btn) btn.innerHTML = originalContent; }, 2000);
+        })
+        .finally(() => {
+            node.style.transform = originalTransform;
+        });
+};
 
 function renderTravelSummary(stats) {
     const worldPercentage = document.getElementById('world-percentage');
@@ -344,7 +396,7 @@ function renderTravelTrends(transportStats) {
         const durationHours = Math.round(data.durationMs / (1000 * 60 * 60));
 
         const card = document.createElement('div');
-        card.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg'; // Simpler list item style
+        card.className = 'flex items-center justify-between p-4 bg-white/50 rounded-xl hover:bg-white/80 transition-colors border border-white/40';
 
         let icon = '❓';
         let label = type;
@@ -358,13 +410,13 @@ function renderTravelTrends(transportStats) {
         else if (type === 'MOTORCYCLING') { icon = '🏍️'; label = 'Motorbike'; }
 
         card.innerHTML = `
-            <div class="flex items-center gap-3">
-                <span class="text-xl">${icon}</span>
-                <span class="font-medium text-gray-700">${label}</span>
+            <div class="flex items-center gap-4">
+                <span class="text-2xl bg-white p-2 rounded-lg shadow-sm">${icon}</span>
+                <span class="font-semibold text-gray-700">${label}</span>
             </div>
             <div class="text-right">
-                <div class="text-sm font-bold text-gray-900">${distanceKm.toLocaleString()} km</div>
-                <div class="text-xs text-gray-500">${durationHours} hrs</div>
+                <div class="text-base font-bold text-gray-900">${distanceKm.toLocaleString()} km</div>
+                <div class="text-xs text-gray-500 font-medium">${durationHours} hrs</div>
             </div>
         `;
         grid.appendChild(card);
@@ -394,16 +446,15 @@ function renderVisitTrends(visitStats) {
 
     sortedVisits.forEach(place => {
         const card = document.createElement('div');
-        card.className = 'bg-gray-50 rounded-lg p-4 flex items-center justify-between';
+        card.className = 'bg-white/50 rounded-xl p-4 flex items-center justify-between hover:bg-white/80 transition-colors border border-white/40';
 
         card.innerHTML = `
             <div>
-                <p class="font-medium text-gray-900 truncate w-48" title="${place.name}">${place.name}</p>
-                <p class="text-xs text-gray-500 truncate w-48">${place.address || ''}</p>
+                <p class="font-semibold text-gray-900 truncate w-48" title="${place.name}">${place.name}</p>
+                <p class="text-xs text-gray-500 truncate w-48 font-medium">${place.address || ''}</p>
             </div>
             <div class="flex flex-col items-end">
-                <span class="text-2xl font-bold text-blue-600">${place.count}</span>
-                <span class="text-xs text-gray-500">visits</span>
+                <span class="text-xl font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md min-w-[30px] text-center">${place.count}</span>
             </div>
         `;
         grid.appendChild(card);
@@ -425,14 +476,16 @@ function renderHighlights(visitStats, segments) {
     if (hasNames) {
         topPlaces.forEach(place => {
             const card = document.createElement('div');
-            card.className = 'bg-white border border-gray-100 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow';
+            card.className = 'glass rounded-xl p-5 shadow-sm hover:shadow-lg transition-all transform hover:-translate-y-1';
             card.innerHTML = `
-                 <div class="w-full h-32 bg-gray-100 rounded-md mb-3 flex items-center justify-center text-gray-300">
-                    <span class="text-4xl">📍</span>
+                 <div class="w-full h-32 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg mb-4 flex items-center justify-center text-indigo-300">
+                    <span class="text-5xl drop-shadow-sm">📍</span>
                 </div>
-                <h3 class="font-medium text-gray-900 mb-1 truncate" title="${place.name}">${place.name}</h3>
-                <p class="text-sm text-gray-500">${place.count} visits</p>
-                <p class="text-xs text-gray-400">${place.latLng ? place.latLng : ''}</p>
+                <h3 class="font-bold text-gray-900 mb-1 truncate text-lg" title="${place.name}">${place.name}</h3>
+                <div class="flex justify-between items-center mt-3">
+                    <span class="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-md">${place.count} visits</span>
+                    <p class="text-xs text-gray-400 font-mono">${place.latLng ? place.latLng : ''}</p>
+                </div>
             `;
             placesGrid.appendChild(card);
         });
@@ -463,16 +516,14 @@ function renderHighlights(visitStats, segments) {
     if (topCities.length > 0) {
         topCities.forEach(([city, count]) => {
             const card = document.createElement('div');
-            card.className = 'bg-white border border-gray-100 rounded-lg p-4 shadow-sm';
+            card.className = 'glass rounded-xl p-5 shadow-sm flex items-center gap-4 hover:shadow-lg transition-all';
             card.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <div class="p-2 bg-purple-50 text-purple-600 rounded-lg">
-                        🏙️
-                    </div>
-                    <div>
-                        <h3 class="font-medium text-gray-900">${city}</h3>
-                        <p class="text-xs text-gray-500">${count} places visited</p>
-                    </div>
+                <div class="p-3 bg-gradient-to-br from-purple-100 to-pink-100 text-purple-600 rounded-xl shadow-inner">
+                    <span class="text-2xl">🏙️</span>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-900 text-lg leading-tight">${city}</h3>
+                    <p class="text-sm text-gray-500 font-medium mt-1">${count} places visited</p>
                 </div>
             `;
             citiesGrid.appendChild(card);

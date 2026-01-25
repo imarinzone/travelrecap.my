@@ -4,277 +4,1048 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your 2024 Timeline Update</title>
+    <title>Your Travel Recap</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Leaflet Marker Cluster CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet"
+        crossorigin="anonymous">
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Your Travel Recap" />
+    <meta property="og:description"
+        content="Visualize your Google Timeline data with beautiful interactive maps and stats. 100% private and client-side." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="images/globe.png" />
+
+    <!-- Leaflet CSS (Inlined for file:// compatibility) -->
+    <style>
+        /* required styles */
+        .leaflet-pane,
+        .leaflet-tile,
+        .leaflet-marker-icon,
+        .leaflet-marker-shadow,
+        .leaflet-tile-container,
+        .leaflet-pane>svg,
+        .leaflet-pane>canvas,
+        .leaflet-zoom-box,
+        .leaflet-image-layer,
+        .leaflet-layer {
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        .leaflet-container {
+            overflow: hidden;
+        }
+
+        .leaflet-tile,
+        .leaflet-marker-icon,
+        .leaflet-marker-shadow {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        .leaflet-tile::selection {
+            background: transparent;
+        }
+
+        .leaflet-safari .leaflet-tile {
+            image-rendering: -webkit-optimize-contrast;
+        }
+
+        .leaflet-safari .leaflet-tile-container {
+            width: 1600px;
+            height: 1600px;
+            -webkit-transform-origin: 0 0;
+        }
+
+        .leaflet-marker-icon,
+        .leaflet-marker-shadow {
+            display: block;
+        }
+
+        .leaflet-container .leaflet-overlay-pane svg {
+            max-width: none !important;
+            max-height: none !important;
+        }
+
+        .leaflet-container .leaflet-marker-pane img,
+        .leaflet-container .leaflet-shadow-pane img,
+        .leaflet-container .leaflet-tile-pane img,
+        .leaflet-container img.leaflet-image-layer,
+        .leaflet-container .leaflet-tile {
+            max-width: none !important;
+            max-height: none !important;
+            width: auto;
+            padding: 0;
+        }
+
+        .leaflet-container img.leaflet-tile {
+            mix-blend-mode: plus-lighter;
+        }
+
+        .leaflet-container.leaflet-touch-zoom {
+            -ms-touch-action: pan-x pan-y;
+            touch-action: pan-x pan-y;
+        }
+
+        .leaflet-container.leaflet-touch-drag {
+            -ms-touch-action: pinch-zoom;
+            touch-action: none;
+            touch-action: pinch-zoom;
+        }
+
+        .leaflet-container.leaflet-touch-drag.leaflet-touch-zoom {
+            -ms-touch-action: none;
+            touch-action: none;
+        }
+
+        .leaflet-container {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .leaflet-container a {
+            -webkit-tap-highlight-color: rgba(51, 181, 229, 0.4);
+        }
+
+        .leaflet-tile {
+            filter: inherit;
+            visibility: hidden;
+        }
+
+        .leaflet-tile-loaded {
+            visibility: inherit;
+        }
+
+        .leaflet-zoom-box {
+            width: 0;
+            height: 0;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+            z-index: 800;
+        }
+
+        .leaflet-overlay-pane svg {
+            -moz-user-select: none;
+        }
+
+        .leaflet-pane {
+            z-index: 400;
+        }
+
+        .leaflet-tile-pane {
+            z-index: 200;
+        }
+
+        .leaflet-overlay-pane {
+            z-index: 400;
+        }
+
+        .leaflet-shadow-pane {
+            z-index: 500;
+        }
+
+        .leaflet-marker-pane {
+            z-index: 600;
+        }
+
+        .leaflet-tooltip-pane {
+            z-index: 650;
+        }
+
+        .leaflet-popup-pane {
+            z-index: 700;
+        }
+
+        .leaflet-map-pane canvas {
+            z-index: 100;
+        }
+
+        .leaflet-map-pane svg {
+            z-index: 200;
+        }
+
+        .leaflet-vml-shape {
+            width: 1px;
+            height: 1px;
+        }
+
+        .lvml {
+            behavior: url(#default#VML);
+            display: inline-block;
+            position: absolute;
+        }
+
+        .leaflet-control {
+            position: relative;
+            z-index: 800;
+            pointer-events: visiblePainted;
+            pointer-events: auto;
+        }
+
+        .leaflet-top,
+        .leaflet-bottom {
+            position: absolute;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .leaflet-top {
+            top: 0;
+        }
+
+        .leaflet-right {
+            right: 0;
+        }
+
+        .leaflet-bottom {
+            bottom: 0;
+        }
+
+        .leaflet-left {
+            left: 0;
+        }
+
+        .leaflet-control {
+            float: left;
+            clear: both;
+        }
+
+        .leaflet-right .leaflet-control {
+            float: right;
+        }
+
+        .leaflet-top .leaflet-control {
+            margin-top: 10px;
+        }
+
+        .leaflet-bottom .leaflet-control {
+            margin-bottom: 10px;
+        }
+
+        .leaflet-left .leaflet-control {
+            margin-left: 10px;
+        }
+
+        .leaflet-right .leaflet-control {
+            margin-right: 10px;
+        }
+
+        .leaflet-fade-anim .leaflet-popup {
+            opacity: 0;
+            -webkit-transition: opacity 0.2s linear;
+            -moz-transition: opacity 0.2s linear;
+            transition: opacity 0.2s linear;
+        }
+
+        .leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+            opacity: 1;
+        }
+
+        .leaflet-zoom-animated {
+            -webkit-transform-origin: 0 0;
+            -ms-transform-origin: 0 0;
+            transform-origin: 0 0;
+        }
+
+        svg.leaflet-zoom-animated {
+            will-change: transform;
+        }
+
+        .leaflet-zoom-anim .leaflet-zoom-animated {
+            -webkit-transition: -webkit-transform 0.25s cubic-bezier(0, 0, 0.25, 1);
+            -moz-transition: -moz-transform 0.25s cubic-bezier(0, 0, 0.25, 1);
+            transition: transform 0.25s cubic-bezier(0, 0, 0.25, 1);
+        }
+
+        .leaflet-zoom-anim .leaflet-tile,
+        .leaflet-pan-anim .leaflet-tile {
+            -webkit-transition: none;
+            -moz-transition: none;
+            transition: none;
+        }
+
+        .leaflet-zoom-anim .leaflet-zoom-hide {
+            visibility: hidden;
+        }
+
+        .leaflet-interactive {
+            cursor: pointer;
+        }
+
+        .leaflet-grab {
+            cursor: -webkit-grab;
+            cursor: -moz-grab;
+            cursor: grab;
+        }
+
+        .leaflet-crosshair,
+        .leaflet-crosshair .leaflet-interactive {
+            cursor: crosshair;
+        }
+
+        .leaflet-popup-pane,
+        .leaflet-control {
+            cursor: auto;
+        }
+
+        .leaflet-dragging .leaflet-grab,
+        .leaflet-dragging .leaflet-grab .leaflet-interactive,
+        .leaflet-dragging .leaflet-marker-draggable {
+            cursor: move;
+            cursor: -webkit-grabbing;
+            cursor: -moz-grabbing;
+            cursor: grabbing;
+        }
+
+        .leaflet-marker-icon,
+        .leaflet-marker-shadow,
+        .leaflet-image-layer,
+        .leaflet-pane>svg path,
+        .leaflet-tile-container {
+            pointer-events: none;
+        }
+
+        .leaflet-marker-icon.leaflet-interactive,
+        .leaflet-image-layer.leaflet-interactive,
+        .leaflet-pane>svg path.leaflet-interactive,
+        svg.leaflet-image-layer.leaflet-interactive path {
+            pointer-events: visiblePainted;
+            pointer-events: auto;
+        }
+
+        .leaflet-container {
+            background: #ddd;
+            outline-offset: 1px;
+        }
+
+        .leaflet-container a {
+            color: #0078A8;
+        }
+
+        .leaflet-zoom-box {
+            border: 2px dotted #38f;
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .leaflet-container {
+            font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            font-size: 0.75rem;
+            line-height: 1.5;
+        }
+
+        .leaflet-bar {
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.65);
+            border-radius: 4px;
+        }
+
+        .leaflet-bar a {
+            background-color: #fff;
+            border-bottom: 1px solid #ccc;
+            width: 26px;
+            height: 26px;
+            line-height: 26px;
+            display: block;
+            text-align: center;
+            text-decoration: none;
+            color: black;
+        }
+
+        .leaflet-bar a,
+        .leaflet-control-layers-toggle {
+            background-position: 50% 50%;
+            background-repeat: no-repeat;
+            display: block;
+        }
+
+        .leaflet-bar a:hover,
+        .leaflet-bar a:focus {
+            background-color: #f4f4f4;
+        }
+
+        .leaflet-bar a:first-child {
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+        }
+
+        .leaflet-bar a:last-child {
+            border-bottom-left-radius: 4px;
+            border-bottom-right-radius: 4px;
+            border-bottom: none;
+        }
+
+        .leaflet-bar a.leaflet-disabled {
+            cursor: default;
+            background-color: #f4f4f4;
+            color: #bbb;
+        }
+
+        .leaflet-touch .leaflet-bar a {
+            width: 30px;
+            height: 30px;
+            line-height: 30px;
+        }
+
+        .leaflet-touch .leaflet-bar a:first-child {
+            border-top-left-radius: 2px;
+            border-top-right-radius: 2px;
+        }
+
+        .leaflet-touch .leaflet-bar a:last-child {
+            border-bottom-left-radius: 2px;
+            border-bottom-right-radius: 2px;
+        }
+
+        .leaflet-control-zoom-in,
+        .leaflet-control-zoom-out {
+            font: bold 18px 'Lucida Console', Monaco, monospace;
+            text-indent: 1px;
+        }
+
+        .leaflet-touch .leaflet-control-zoom-in,
+        .leaflet-touch .leaflet-control-zoom-out {
+            font-size: 22px;
+        }
+
+        .leaflet-control-layers {
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+            background: #fff;
+            border-radius: 5px;
+        }
+
+        .leaflet-control-layers-toggle {
+            width: 36px;
+            height: 36px;
+        }
+
+        .leaflet-retina .leaflet-control-layers-toggle {
+            background-size: 26px 26px;
+        }
+
+        .leaflet-touch .leaflet-control-layers-toggle {
+            width: 44px;
+            height: 44px;
+        }
+
+        .leaflet-control-layers .leaflet-control-layers-list,
+        .leaflet-control-layers-expanded .leaflet-control-layers-toggle {
+            display: none;
+        }
+
+        .leaflet-control-layers-expanded .leaflet-control-layers-list {
+            display: block;
+            position: relative;
+        }
+
+        .leaflet-control-layers-expanded {
+            padding: 6px 10px 6px 6px;
+            color: #333;
+            background: #fff;
+        }
+
+        .leaflet-control-layers-scrollbar {
+            overflow-y: scroll;
+            overflow-x: hidden;
+            padding-right: 5px;
+        }
+
+        .leaflet-control-layers-selector {
+            margin-top: 2px;
+            position: relative;
+            top: 1px;
+        }
+
+        .leaflet-control-layers label {
+            display: block;
+            font-size: 13px;
+            font-size: 1.08333em;
+        }
+
+        .leaflet-control-layers-separator {
+            height: 0;
+            border-top: 1px solid #ddd;
+            margin: 5px -10px 5px -6px;
+        }
+
+        .leaflet-container .leaflet-control-attribution {
+            background: #fff;
+            background: rgba(255, 255, 255, 0.8);
+            margin: 0;
+        }
+
+        .leaflet-control-attribution,
+        .leaflet-control-scale-line {
+            padding: 0 5px;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        .leaflet-control-attribution a {
+            text-decoration: none;
+        }
+
+        .leaflet-control-attribution a:hover,
+        .leaflet-control-attribution a:focus {
+            text-decoration: underline;
+        }
+
+        .leaflet-attribution-flag {
+            display: inline !important;
+            vertical-align: baseline !important;
+            width: 1em;
+            height: 0.6669em;
+        }
+
+        .leaflet-left .leaflet-control-scale {
+            margin-left: 5px;
+        }
+
+        .leaflet-bottom .leaflet-control-scale {
+            margin-bottom: 5px;
+        }
+
+        .leaflet-control-scale-line {
+            border: 2px solid #777;
+            border-top: none;
+            line-height: 1.1;
+            padding: 2px 5px 1px;
+            white-space: nowrap;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.8);
+            text-shadow: 1px 1px #fff;
+        }
+
+        .leaflet-control-scale-line:not(:first-child) {
+            border-top: 2px solid #777;
+            border-bottom: none;
+            margin-top: -2px;
+        }
+
+        .leaflet-control-scale-line:not(:first-child):not(:last-child) {
+            border-bottom: 2px solid #777;
+        }
+
+        .leaflet-touch .leaflet-control-attribution,
+        .leaflet-touch .leaflet-control-layers,
+        .leaflet-touch .leaflet-bar {
+            box-shadow: none;
+        }
+
+        .leaflet-touch .leaflet-control-layers,
+        .leaflet-touch .leaflet-bar {
+            border: 2px solid rgba(0, 0, 0, 0.2);
+            background-clip: padding-box;
+        }
+
+        .leaflet-popup {
+            position: absolute;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .leaflet-popup-content-wrapper {
+            padding: 1px;
+            text-align: left;
+            border-radius: 12px;
+        }
+
+        .leaflet-popup-content {
+            margin: 13px 24px 13px 20px;
+            line-height: 1.3;
+            font-size: 13px;
+            font-size: 1.08333em;
+            min-height: 1px;
+        }
+
+        .leaflet-popup-content p {
+            margin: 17px 0;
+            margin: 1.3em 0;
+        }
+
+        .leaflet-popup-tip-container {
+            width: 40px;
+            height: 20px;
+            position: absolute;
+            left: 50%;
+            margin-top: -1px;
+            margin-left: -20px;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .leaflet-popup-tip {
+            width: 17px;
+            height: 17px;
+            padding: 1px;
+
+            margin: -10px auto 0;
+            pointer-events: auto;
+
+            -webkit-transform: rotate(45deg);
+            -moz-transform: rotate(45deg);
+            -ms-transform: rotate(45deg);
+            transform: rotate(45deg);
+        }
+
+        .leaflet-popup-content-wrapper,
+        .leaflet-popup-tip {
+            background: white;
+            color: #333;
+            box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
+        }
+
+        .leaflet-container a.leaflet-popup-close-button {
+            position: absolute;
+            top: 0;
+            right: 0;
+            border: none;
+            text-align: center;
+            width: 24px;
+            height: 24px;
+            font: 16px/24px Tahoma, Verdana, sans-serif;
+            color: #757575;
+            text-decoration: none;
+            background: transparent;
+        }
+
+        .leaflet-container a.leaflet-popup-close-button:hover,
+        .leaflet-container a.leaflet-popup-close-button:focus {
+            color: #585858;
+        }
+
+        .leaflet-popup-scrolled {
+            overflow: auto;
+        }
+
+        .leaflet-oldie .leaflet-popup-content-wrapper {
+            -ms-zoom: 1;
+        }
+
+        .leaflet-oldie .leaflet-popup-tip {
+            width: 24px;
+            margin: 0 auto;
+            -ms-filter: "progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678)";
+            filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678);
+        }
+
+        .leaflet-oldie .leaflet-control-zoom,
+        .leaflet-oldie .leaflet-control-layers,
+        .leaflet-oldie .leaflet-popup-content-wrapper,
+        .leaflet-oldie .leaflet-popup-tip {
+            border: 1px solid #999;
+        }
+
+        .leaflet-div-icon {
+            background: #fff;
+            border: 1px solid #666;
+        }
+
+        .leaflet-tooltip {
+            position: absolute;
+            padding: 6px;
+            background-color: #fff;
+            border: 1px solid #fff;
+            border-radius: 3px;
+            color: #222;
+            white-space: nowrap;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            pointer-events: none;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+        }
+
+        .leaflet-tooltip.leaflet-interactive {
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        .leaflet-tooltip-top:before,
+        .leaflet-tooltip-bottom:before,
+        .leaflet-tooltip-left:before,
+        .leaflet-tooltip-right:before {
+            position: absolute;
+            pointer-events: none;
+            border: 6px solid transparent;
+            background: transparent;
+            content: "";
+        }
+
+        .leaflet-tooltip-bottom {
+            margin-top: 6px;
+        }
+
+        .leaflet-tooltip-top {
+            margin-top: -6px;
+        }
+
+        .leaflet-tooltip-bottom:before,
+        .leaflet-tooltip-top:before {
+            left: 50%;
+            margin-left: -6px;
+        }
+
+        .leaflet-tooltip-top:before {
+            bottom: 0;
+            margin-bottom: -12px;
+            border-top-color: #fff;
+        }
+
+        .leaflet-tooltip-bottom:before {
+            top: 0;
+            margin-top: -12px;
+            margin-left: -6px;
+            border-bottom-color: #fff;
+        }
+
+        .leaflet-tooltip-left {
+            margin-left: -6px;
+        }
+
+        .leaflet-tooltip-right {
+            margin-left: 6px;
+        }
+
+        .leaflet-tooltip-left:before,
+        .leaflet-tooltip-right:before {
+            top: 50%;
+            margin-top: -6px;
+        }
+
+        .leaflet-tooltip-left:before {
+            right: 0;
+            margin-right: -12px;
+            border-left-color: #fff;
+        }
+
+        .leaflet-tooltip-right:before {
+            left: 0;
+            margin-left: -12px;
+            border-right-color: #fff;
+        }
+    </style>
+    <!-- HTML to Image -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
     <style>
         body {
-            font-family: 'Roboto', sans-serif;
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
         }
 
-        /* Fullscreen map styles - takes entire display */
-        section:fullscreen,
-        section:-webkit-full-screen,
-        section:-moz-full-screen,
-        section:-ms-fullscreen {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            max-width: 100% !important;
-            max-height: 100% !important;
-            background: white;
-            display: flex !important;
-            flex-direction: column !important;
-            z-index: 9999 !important;
-            border: none !important;
-            border-radius: 0 !important;
+        /* Glassmorphism utility */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
         }
 
-        section:fullscreen .p-4,
-        section:-webkit-full-screen .p-4,
-        section:-moz-full-screen .p-4,
-        section:-ms-fullscreen .p-4 {
-            padding: 1rem !important;
-            flex-shrink: 0;
-            margin: 0 !important;
+        .glass-dark {
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        section:fullscreen #map-container-wrapper,
-        section:-webkit-full-screen #map-container-wrapper,
-        section:-moz-full-screen #map-container-wrapper,
-        section:-ms-fullscreen #map-container-wrapper {
-            flex: 1 !important;
-            width: 100% !important;
-            height: 100% !important;
-            min-height: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
+        /* Hide scrollbar for clean horizontal scroll */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
         }
 
-        section:fullscreen #map,
-        section:-webkit-full-screen #map,
-        section:-moz-full-screen #map,
-        section:-ms-fullscreen #map {
-            height: 100% !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Map specific overrides */
+        #map {
+            z-index: 10;
         }
     </style>
 </head>
 
-<body class="bg-gray-50">
-    <div class="max-w-4xl mx-auto px-4 py-8">
-        <!-- Header Section -->
-        <header class="mb-8">
-            <h1 class="text-3xl font-normal text-gray-900 mb-4" id="header-title">Im, here's your 2024 Timeline update
-            </h1>
-            <p class="text-sm text-gray-700 mb-6" id="header-description">
-                You're receiving this email because you turned on Location History, a Google Account-level setting that
-                creates Timeline, a personal map of your visited places, routes, and trips. You can view, edit, and
-                delete this data anytime in Timeline.
-            </p>
+<body class="text-gray-800 antialiased selection:bg-blue-100 selection:text-blue-900">
 
-            <!-- Location History Status -->
-            <div class="mb-6">
-                <a href="#" class="text-sm text-gray-600 hover:text-blue-600 mb-2 block">Explore Timeline</a>
-                <div class="text-sm text-gray-700 mb-2">
-                    <span>Location History: </span>
-                    <span class="font-medium" id="location-status">ON</span>
-                </div>
-                <a href="#" class="text-sm text-blue-600 hover:text-blue-800" id="manage-settings">Manage Settings</a>
-            </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 mb-2"
+                id="header-title">
+                Your Travel Recap
+            </h1>
+            <p class="text-lg text-gray-500 font-light" id="header-description">
+                A visual summary of your journey around the world.
+            </p>
         </header>
 
+        <!-- Initial Upload Section -->
+        <section id="upload-section" class="max-w-xl mx-auto mb-16">
+            <div
+                class="glass rounded-3xl p-8 shadow-xl text-center transform hover:scale-[1.01] transition-transform duration-300">
+                <div
+                    class="mb-6 inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-3">Load Your Data</h2>
+                <p class="text-sm text-gray-500 mb-6">
+                    Upload your <code>GoogleTimeline.json</code>. <br>Your data stays 100% private and is processed
+                    locally.
+                </p>
 
-
-        <!-- File Upload Section -->
-        <section class="mb-8 bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
-            <h2 class="text-xl font-medium text-gray-900 mb-4">Upload Your Timeline Data</h2>
-            <p class="text-sm text-gray-600 mb-4">
-                Select your <code>GoogleTimeline.json</code> file to visualize your visits. Data is processed locally in
-                your browser.
-            </p>
-            <div class="flex items-center gap-4">
-                <input type="file" id="timeline-file-input" accept=".json" class="block w-full text-sm text-gray-500
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-full file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-blue-50 file:text-blue-700
-                    hover:file:bg-blue-100
-                " />
-                <span id="upload-status" class="text-sm font-medium text-gray-500"></span>
+                <div class="relative group">
+                    <input type="file" id="timeline-file-input" accept=".json"
+                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                    <div
+                        class="bg-blue-600 text-white rounded-xl px-6 py-4 font-semibold shadow-lg group-hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                        <span>Select File</span>
+                    </div>
+                </div>
+                <div id="upload-status" class="mt-4 text-sm font-medium text-gray-500 min-h-[20px]"></div>
             </div>
         </section>
 
-        <!-- Dashboard Content Wrapper (Initially Hidden) -->
-        <div id="dashboard-content" class="hidden grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <!-- Main Dashboard (Hidden by default) -->
+        <div id="dashboard-content" class="hidden space-y-8 pb-12">
 
-            <!-- Interactive Leaflet Map Section -->
-            <section class="bg-white rounded-lg shadow-sm overflow-hidden xl:col-span-3">
-                <div class="p-4 border-b border-gray-200">
-                    <div class="flex items-center justify-between mb-2">
-                        <h2 class="text-lg font-medium text-gray-900">Interactive Map</h2>
-                        <div class="flex gap-2 items-center">
-                            <label for="map-year-filter" class="text-sm text-gray-700 mr-2">Year:</label>
-                            <select id="map-year-filter"
-                                class="px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-900 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                                <option value="">All Years</option>
-                            </select>
-                            <button id="map-style-light"
-                                class="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">
-                                Light
-                            </button>
-                            <button id="map-style-dark"
-                                class="px-4 py-2 text-sm font-medium rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
-                                Dark
-                            </button>
-                            <button id="map-fullscreen"
-                                class="px-4 py-2 text-sm font-medium rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
-                                title="Toggle fullscreen">
-                                <span id="fullscreen-icon">⛶</span>
-                                <span id="fullscreen-text" class="ml-1 hidden sm:inline">Fullscreen</span>
-                            </button>
-                        </div>
+            <!-- Map Section -->
+            <section class="glass rounded-3xl shadow-lg border border-white/50 overflow-hidden relative group">
+                <div
+                    class="p-6 border-b border-gray-100/50 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                        <span>🗺️</span> Interactive Map
+                    </h2>
+
+                    <div class="flex flex-wrap items-center gap-3 bg-gray-100/50 p-1.5 rounded-xl">
+                        <select id="map-year-filter"
+                            class="bg-transparent text-sm font-medium text-gray-700 px-3 py-1.5 rounded-lg focus:outline-none focus:bg-white transition-colors cursor-pointer border-none ring-0">
+                            <option value="">All Years</option>
+                        </select>
+                        <div class="h-4 w-[1px] bg-gray-300"></div>
+                        <button id="map-style-light"
+                            class="p-2 rounded-lg text-sm font-medium transition-all bg-white shadow-sm text-blue-600">Light</button>
+                        <button id="map-style-dark"
+                            class="p-2 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-900 transition-all">Dark</button>
+                        <div class="h-4 w-[1px] bg-gray-300"></div>
+                        <button id="map-fullscreen" class="p-2 text-gray-500 hover:text-blue-600 transition-colors"
+                            title="Toggle Fullscreen">
+                            <span id="fullscreen-icon">⛶</span>
+                        </button>
+                        <div class="h-4 w-[1px] bg-gray-300"></div>
+                        <button onclick="shareCard('map-container-wrapper')"
+                            class="p-2 text-gray-500 hover:text-blue-600 transition-colors" title="Share Map">
+                            <span class="font-bold">📤</span>
+                        </button>
                     </div>
                 </div>
-                <div id="map-container-wrapper" class="relative">
-                    <div id="map" class="w-full h-[500px]"></div>
-                </div>
-            </section>
 
-            <!-- Statistics Grid -->
-            <section class="xl:col-span-3">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="statistics-grid">
-                    <!-- Statistics cards will be rendered here -->
+                <div id="map-container-wrapper" class="relative bg-gray-100 w-full h-[600px]">
+                    <div id="map" class="w-full h-full"></div>
                 </div>
             </section>
 
-            <!-- Main Metrics Grid -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 xl:col-span-3">
+            <!-- Key Metrics Grid -->
+            <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="statistics-grid">
+                <!-- Stat cards managed by script.js -->
+            </section>
 
-                <!-- Travel Summary -->
-                <section class="bg-white rounded-lg shadow-sm p-8 xl:col-span-2 flex flex-col justify-center">
-                    <div class="flex flex-col md:flex-row items-center justify-center">
-                        <div class="mb-6 md:mb-0 md:mr-12">
-                            <div class="w-48 h-48 mx-auto relative">
-                                <img src="images/globe.png" alt="Globe" class="w-full h-full object-contain"
-                                    onerror="this.style.display='none'; this.nextElementSibling.style.position='relative';" />
-                                <div
-                                    class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                    <span class="text-3xl font-bold text-gray-900" id="world-percentage">60%</span>
-                                    <span class="text-xs text-gray-600 mt-1">around the world</span>
-                                </div>
-                            </div>
+            <!-- Travel Summary (Globe) -->
+            <section class="glass rounded-3xl p-8 shadow-lg border border-white/50 relative overflow-hidden"
+                id="travel-summary-card">
+                <div class="relative z-10 flex flex-col md:flex-row items-center gap-12">
+                    <div class="relative group cursor-pointer" onclick="shareCard('travel-summary-card')">
+                        <div
+                            class="absolute -inset-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full opacity-20 blur-xl group-hover:opacity-30 transition-opacity">
                         </div>
-                        <div class="text-center md:text-left">
-                            <h3 class="text-lg font-medium text-gray-900 mb-2">Your Travel Footprint</h3>
-                            <p class="text-lg text-green-600" id="travel-description"></p>
+                        <img src="images/globe.png" alt="Globe"
+                            class="w-48 h-48 object-contain drop-shadow-2xl relative z-10"
+                            onerror="this.style.display='none'" />
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span class="text-4xl font-black text-gray-900 drop-shadow-sm"
+                                id="world-percentage">--%</span>
+                            <span class="text-xs font-bold text-gray-600 tracking-wider uppercase">World Covered</span>
                         </div>
                     </div>
-                </section>
 
-                <!-- Time Distribution -->
-                <section class="bg-white rounded-lg shadow-sm p-6">
-                    <h2 class="text-lg font-bold text-gray-900 mb-4">Time Distribution ⏳</h2>
-                    <div id="time-distribution-stats" class="space-y-4">
-                        <!-- Stats here -->
+                    <div class="flex-1 text-center md:text-left space-y-4">
+                        <h3 class="text-2xl font-bold text-gray-800">Your Global Footprint</h3>
+                        <p class="text-lg text-gray-600 leading-relaxed" id="travel-description">
+                            Analysis pending...
+                        </p>
+                        <button onclick="shareCard('travel-summary-card')"
+                            class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 mt-2">
+                            <span>📤 Share Summary</span>
+                        </button>
                     </div>
-                </section>
+                </div>
+            </section>
 
-                <!-- Travel Trends -->
-                <section class="bg-white rounded-lg shadow-sm p-6 xl:col-span-1">
-                    <h2 class="text-lg font-bold text-gray-900 mb-4">Travel Modes 🚗</h2>
-                    <div class="flex flex-col gap-4 max-h-[400px] overflow-y-auto pr-2" id="travel-trends-grid">
-                        <!-- Travel mode cards will be rendered here -->
+            <!-- Detailed Stats Grid -->
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+
+                <!-- Travel Modes -->
+                <section class="glass rounded-3xl p-6 shadow-lg border border-white/50 xl:col-span-1 flex flex-col"
+                    id="travel-modes-card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-gray-900">How You Move</h3>
+                        <button onclick="shareCard('travel-modes-card')"
+                            class="text-gray-400 hover:text-blue-600 transition-colors" title="Share">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
+                                </path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1" id="travel-trends-grid">
+                        <!-- Content -->
                     </div>
                 </section>
 
                 <!-- Visit Trends -->
-                <section class="bg-white rounded-lg shadow-sm p-6 xl:col-span-1">
-                    <h2 class="text-lg font-bold text-gray-900 mb-4">Top Visits 📍</h2>
-                    <div class="flex flex-col gap-4 max-h-[400px] overflow-y-auto pr-2" id="visit-trends-grid">
-                        <!-- Visit trend cards will be rendered here -->
+                <section class="glass rounded-3xl p-6 shadow-lg border border-white/50 xl:col-span-1 flex flex-col"
+                    id="visit-trends-card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-gray-900">Top Spots</h3>
+                        <button onclick="shareCard('visit-trends-card')"
+                            class="text-gray-400 hover:text-blue-600 transition-colors" title="Share">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
+                                </path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1" id="visit-trends-grid">
+                        <!-- Content -->
                     </div>
                 </section>
 
-                <!-- Record Breakers -->
-                <section class="bg-white rounded-lg shadow-sm p-6">
-                    <h2 class="text-lg font-bold text-gray-900 mb-4">Record Breakers 🏆</h2>
-                    <div id="record-breakers-stats" class="space-y-4">
-                        <!-- Stats here -->
+                <!-- Stats Column -->
+                <div class="flex flex-col gap-6 xl:col-span-1">
+
+                    <!-- Time -->
+                    <section class="glass rounded-3xl p-6 shadow-lg border border-white/50" id="time-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold text-gray-900">Time Spent</h3>
+                            <button onclick="shareCard('time-card')"
+                                class="text-gray-400 hover:text-blue-600 transition-colors" title="Share">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
+                                    </path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="time-distribution-stats" class="space-y-6"></div>
+                    </section>
+
+                    <!-- Records -->
+                    <section class="glass rounded-3xl p-6 shadow-lg border border-white/50" id="records-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold text-gray-900">Personal Records</h3>
+                            <button onclick="shareCard('records-card')"
+                                class="text-gray-400 hover:text-blue-600 transition-colors" title="Share">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
+                                    </path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="record-breakers-stats" class="space-y-4"></div>
+                    </section>
+
+                </div>
+
+            </div>
+
+            <!-- Eco Impact -->
+            <section class="glass rounded-3xl p-8 shadow-lg border border-white/50" id="eco-card">
+                <div class="flex justify-between items-center mb-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                            🌿 Environmental Impact
+                        </h2>
+                        <p class="text-sm text-gray-500 mt-1">Estimated footprint based on travel modes</p>
                     </div>
+                    <button onclick="shareCard('eco-card')"
+                        class="text-gray-400 hover:text-blue-600 transition-colors p-2 bg-white rounded-full shadow-sm"
+                        title="Share">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="eco-impact-grid"></div>
+            </section>
+
+            <!-- Cities & Places -->
+            <div class="space-y-12">
+                <!-- Cities -->
+                <section>
+                    <div class="flex items-center gap-4 mb-6 px-2">
+                        <h2 class="text-2xl font-bold text-gray-800">Top Cities</h2>
+                        <div class="h-px bg-gray-300 flex-1"></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4" id="cities-grid"></div>
+                </section>
+
+                <!-- Places -->
+                <section>
+                    <div class="flex items-center gap-4 mb-6 px-2">
+                        <h2 class="text-2xl font-bold text-gray-800">Memorable Places</h2>
+                        <div class="h-px bg-gray-300 flex-1"></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="places-grid"></div>
                 </section>
             </div>
 
-            <!-- Environmental Impact -->
-            <section class="bg-white rounded-lg shadow-sm p-6 xl:col-span-3">
-                <div class="mb-6">
-                    <h2 class="text-xl font-bold text-gray-900">Environmental Impact 🌿</h2>
-                    <p class="text-sm text-gray-600">Estimated carbon footprint from your travel.</p>
+            <!-- All Time Stats Footer -->
+            <section class="mt-16 bg-gray-900 rounded-3xl p-10 text-white shadow-2xl relative overflow-hidden"
+                id="all-time-card">
+                <div class="absolute top-0 right-0 p-10 opacity-10">
+                    <img src="images/globe.png" class="w-64 h-64 grayscale invert" />
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="eco-impact-grid">
-                    <!-- Eco cards will be rendered here -->
-                </div>
-            </section>
-
-            <!-- Cities Highlights -->
-            <section class="xl:col-span-3">
-                <div class="mb-4">
-                    <h2 class="text-xl font-bold text-gray-900">Top Cities</h2>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="cities-grid">
-                    <!-- City cards will be rendered here -->
-                </div>
-            </section>
-
-            <!-- Places Highlights -->
-            <section class="xl:col-span-3">
-                <div class="mb-4">
-                    <h2 class="text-xl font-bold text-gray-900">Top Places</h2>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="places-grid">
-                    <!-- Place cards will be rendered here -->
-                </div>
-            </section>
-
-            <!-- All-Time Data Section -->
-            <section class="bg-white rounded-lg shadow-sm p-8 xl:col-span-3">
-                <div class="flex flex-col md:flex-row items-center justify-between">
-                    <div class="mb-6 md:mb-0 w-full">
-                        <h2 class="text-xl font-medium text-gray-900 mb-6">All Time Stats</h2>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center sm:text-left" id="all-time-stats">
-                            <!-- All-time statistics will be rendered here -->
-                        </div>
+                <div class="relative z-10">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10">
+                        <h2 class="text-3xl font-bold">Lifetime Stats</h2>
+                        <button onclick="shareCard('all-time-card')"
+                            class="mt-4 md:mt-0 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg backdrop-blur-sm transition-colors text-sm font-medium flex items-center gap-2">
+                            <span>Share Lifetime Stats</span>
+                        </button>
                     </div>
-                </div>
-                <div class="mt-8 pt-8 border-t border-gray-200 text-center sm:text-left">
-                    <a href="#"
-                        class="inline-block px-4 py-2 bg-gray-100 text-blue-600 rounded-lg hover:bg-gray-200 text-sm font-medium">
-                        Go to your Timeline
-                    </a>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-12" id="all-time-stats">
+                        <!-- Content -->
+                    </div>
                 </div>
             </section>
 
         </div>
+
+        <footer class="mt-20 text-center text-gray-400 text-sm pb-10">
+            <p>Built with ❤️ • Your data never leaves this browser.</p>
+        </footer>
+
     </div>
 
-    <!-- Leaflet JS -->
+    <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Leaflet Marker Cluster JS -->
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="timeline-utils.js"></script>
     <script src="script.js"></script>
