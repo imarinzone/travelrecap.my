@@ -1,5 +1,48 @@
 (function (exports) {
 
+    // structured Logger utility
+    class Logger {
+        static formatMessage(level, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            return `[${timestamp}] [${level}] ${message}`;
+        }
+
+        static info(message, data) {
+            const msg = this.formatMessage('INFO', message);
+            if (data) {
+                console.log(msg, data);
+            } else {
+                console.log(msg);
+            }
+        }
+
+        static warn(message, data) {
+            const msg = this.formatMessage('WARN', message);
+            if (data) {
+                console.warn(msg, data);
+            } else {
+                console.warn(msg);
+            }
+        }
+
+        static error(message, error) {
+            const msg = this.formatMessage('ERROR', message);
+            if (error) {
+                console.error(msg, error);
+            } else {
+                console.error(msg);
+            }
+        }
+
+        static time(label) {
+            console.time(label);
+        }
+
+        static timeEnd(label) {
+            console.timeEnd(label);
+        }
+    }
+
     // Process Google Timeline JSON
     function processTimelineData(data) {
         const allSegments = data.semanticSegments || [];
@@ -183,5 +226,6 @@
     exports.calculateStats = calculateStats;
     exports.calculateAdvancedStats = calculateAdvancedStats;
     exports.extractLocationDetails = extractLocationDetails;
+    exports.Logger = Logger;
 
 })(typeof exports === 'undefined' ? (this.timelineUtils = {}) : exports);

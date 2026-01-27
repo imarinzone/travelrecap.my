@@ -772,6 +772,376 @@
         #map {
             z-index: 10;
         }
+
+        /* ===== ANIMATED STAT SCENE KEYFRAMES ===== */
+
+        /* Plane flying diagonally across */
+        @keyframes plane-glide {
+            0% {
+                transform: translate(-20%, 80%) rotate(-25deg) scale(0.8);
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(120%, -20%) rotate(-25deg) scale(1);
+                opacity: 0;
+            }
+        }
+
+        /* Car driving horizontally */
+        @keyframes car-drive {
+            0% {
+                transform: translateX(-30%);
+            }
+
+            100% {
+                transform: translateX(130%);
+            }
+        }
+
+        /* Train moving horizontally */
+        @keyframes train-drive {
+            0% {
+                transform: translateX(-40%);
+            }
+
+            100% {
+                transform: translateX(140%);
+            }
+        }
+
+        /* Walking human step cycle */
+        @keyframes walk-cycle {
+
+            0%,
+            100% {
+                transform: translateX(-20%) translateY(0);
+            }
+
+            25% {
+                transform: translateX(10%) translateY(-3px);
+            }
+
+            50% {
+                transform: translateX(40%) translateY(0);
+            }
+
+            75% {
+                transform: translateX(70%) translateY(-3px);
+            }
+        }
+
+        /* Cycling animation */
+        @keyframes bike-ride {
+            0% {
+                transform: translateX(-25%) rotate(0deg);
+            }
+
+            50% {
+                transform: translateX(50%) rotate(2deg);
+            }
+
+            100% {
+                transform: translateX(125%) rotate(0deg);
+            }
+        }
+
+        /* City skyline breathing/bobbing */
+        @keyframes city-breathe {
+
+            0%,
+            100% {
+                transform: translateY(0) scale(1);
+            }
+
+            50% {
+                transform: translateY(-3px) scale(1.02);
+            }
+        }
+
+        /* Building window lights twinkling */
+        @keyframes window-twinkle {
+
+            0%,
+            100% {
+                opacity: 0.3;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        /* Tree growing from ground */
+        @keyframes tree-grow {
+            0% {
+                transform: scaleY(0) translateY(100%);
+                opacity: 0;
+            }
+
+            60% {
+                transform: scaleY(1.1) translateY(0);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scaleY(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Tree swaying gently */
+        @keyframes tree-sway {
+
+            0%,
+            100% {
+                transform: rotate(-2deg);
+            }
+
+            50% {
+                transform: rotate(2deg);
+            }
+        }
+
+        /* Factory smoke puffs */
+        @keyframes smoke-puff {
+            0% {
+                transform: translateY(0) scale(0.5);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: translateY(-30px) scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        /* Character breathing (sitting/idle) */
+        @keyframes character-breathe {
+
+            0%,
+            100% {
+                transform: scale(1) translateY(0);
+            }
+
+            50% {
+                transform: scale(1.02) translateY(-2px);
+            }
+        }
+
+        /* Globe-inspired orbital float */
+        @keyframes orbital-float {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            25% {
+                transform: translate(5px, -5px) scale(1.02);
+            }
+
+            50% {
+                transform: translate(0, -8px) scale(1);
+            }
+
+            75% {
+                transform: translate(-5px, -5px) scale(1.02);
+            }
+
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+        }
+
+        /* Pin drop animation for places */
+        @keyframes pin-drop {
+            0% {
+                transform: translateY(-50px) scale(0.5);
+                opacity: 0;
+            }
+
+            60% {
+                transform: translateY(5px) scale(1.1);
+                opacity: 1;
+            }
+
+            80% {
+                transform: translateY(-3px) scale(0.95);
+            }
+
+            100% {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Scene fade-in from background */
+        @keyframes scene-emerge {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Road/path dashes moving */
+        @keyframes road-dash {
+            0% {
+                stroke-dashoffset: 0;
+            }
+
+            100% {
+                stroke-dashoffset: -40;
+            }
+        }
+
+        /* ===== ANIMATION UTILITY CLASSES ===== */
+        .animate-plane-glide {
+            animation: plane-glide 8s ease-in-out infinite;
+        }
+
+        .animate-car-drive {
+            animation: car-drive 6s linear infinite;
+        }
+
+        .animate-train-drive {
+            animation: train-drive 5s linear infinite;
+        }
+
+        .animate-walk-cycle {
+            animation: walk-cycle 4s ease-in-out infinite;
+        }
+
+        .animate-bike-ride {
+            animation: bike-ride 5s ease-in-out infinite;
+        }
+
+        .animate-city-breathe {
+            animation: city-breathe 4s ease-in-out infinite;
+        }
+
+        .animate-window-twinkle {
+            animation: window-twinkle 2s ease-in-out infinite;
+        }
+
+        .animate-tree-grow {
+            animation: tree-grow 2s ease-out forwards;
+            transform-origin: bottom center;
+        }
+
+        .animate-tree-sway {
+            animation: tree-sway 3s ease-in-out infinite;
+            transform-origin: bottom center;
+        }
+
+        .animate-smoke-puff {
+            animation: smoke-puff 3s ease-out infinite;
+        }
+
+        .animate-character-breathe {
+            animation: character-breathe 3s ease-in-out infinite;
+        }
+
+        .animate-orbital-float {
+            animation: orbital-float 6s ease-in-out infinite;
+        }
+
+        .animate-pin-drop {
+            animation: pin-drop 0.8s ease-out forwards;
+        }
+
+        .animate-scene-emerge {
+            animation: scene-emerge 0.6s ease-out forwards;
+        }
+
+        .animate-road-dash {
+            animation: road-dash 1s linear infinite;
+        }
+
+        /* Staggered animation delays */
+        .animation-delay-100 {
+            animation-delay: 100ms;
+        }
+
+        .animation-delay-200 {
+            animation-delay: 200ms;
+        }
+
+        .animation-delay-300 {
+            animation-delay: 300ms;
+        }
+
+        .animation-delay-500 {
+            animation-delay: 500ms;
+        }
+
+        .animation-delay-700 {
+            animation-delay: 700ms;
+        }
+
+        .animation-delay-1000 {
+            animation-delay: 1000ms;
+        }
+
+        /* Stat scene container styles */
+        .stat-scene {
+            position: relative;
+            overflow: hidden;
+            border-radius: 1rem;
+            min-height: 140px;
+            perspective: 1000px;
+        }
+
+        .stat-scene-layer {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .stat-scene-content {
+            position: relative;
+            z-index: 10;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            height: 100%;
+        }
+
+        /* ===== REDUCED MOTION SUPPORT ===== */
+        @media (prefers-reduced-motion: reduce) {
+
+            .animate-plane-glide,
+            .animate-car-drive,
+            .animate-train-drive,
+            .animate-walk-cycle,
+            .animate-bike-ride,
+            .animate-city-breathe,
+            .animate-window-twinkle,
+            .animate-tree-grow,
+            .animate-tree-sway,
+            .animate-smoke-puff,
+            .animate-character-breathe,
+            .animate-orbital-float,
+            .animate-pin-drop,
+            .animate-scene-emerge,
+            .animate-road-dash {
+                animation: none !important;
+                transform: none !important;
+                opacity: 1 !important;
+            }
+        }
     </style>
 </head>
 
@@ -863,10 +1233,144 @@
                 </div>
             </section>
 
-            <!-- Key Metrics Grid -->
-            <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="statistics-grid">
-                <!-- Stat cards managed by script.js -->
+            <!-- Key Metrics Grid - Animated Stats -->
+            <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="statistics-grid">
+                <!-- Animated stat scenes managed by script.js -->
             </section>
+
+            <!-- Travel Summary (Globe) moved to bottom -->
+
+            <!-- Detailed Stats Grid -->
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+
+                <!-- Travel Modes - Animated Scenes -->
+                <section
+                    class="rounded-3xl p-6 shadow-lg bg-gradient-to-br from-white/60 to-white/40 backdrop-blur-sm border border-white/30 xl:col-span-1 flex flex-col"
+                    id="travel-modes-card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-gray-900">How You Move</h3>
+                        <button onclick="shareCard('travel-modes-card')"
+                            class="text-gray-400 hover:text-blue-600 transition-colors" title="Share">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
+                                </path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto pr-2 custom-scrollbar flex-1"
+                        id="travel-trends-grid">
+                        <!-- Animated transport scene cards -->
+                    </div>
+                </section>
+
+                <!-- Visit Trends -->
+                <section
+                    class="rounded-3xl p-6 shadow-lg bg-gradient-to-br from-white/60 to-white/40 backdrop-blur-sm border border-white/30 xl:col-span-1 flex flex-col"
+                    id="visit-trends-card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-gray-900">Top Spots</h3>
+                        <button onclick="shareCard('visit-trends-card')"
+                            class="text-gray-400 hover:text-blue-600 transition-colors" title="Share">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
+                                </path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1" id="visit-trends-grid">
+                        <!-- Content -->
+                    </div>
+                </section>
+
+                <!-- Stats Column - Animated Scenes -->
+                <div class="flex flex-col gap-6 xl:col-span-1">
+
+                    <!-- Time - Animated Distribution -->
+                    <section
+                        class="rounded-3xl p-5 shadow-lg bg-gradient-to-br from-white/60 to-white/40 backdrop-blur-sm border border-white/30"
+                        id="time-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold text-gray-900">Time Spent</h3>
+                            <button onclick="shareCard('time-card')"
+                                class="text-gray-400 hover:text-blue-600 transition-colors" title="Share">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
+                                    </path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="time-distribution-stats"></div>
+                    </section>
+
+                    <!-- Records - Animated Scenes -->
+                    <section
+                        class="rounded-3xl p-5 shadow-lg bg-gradient-to-br from-white/60 to-white/40 backdrop-blur-sm border border-white/30"
+                        id="records-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold text-gray-900">Personal Records</h3>
+                            <button onclick="shareCard('records-card')"
+                                class="text-gray-400 hover:text-blue-600 transition-colors" title="Share">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
+                                    </path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="record-breakers-stats" class="space-y-3"></div>
+                    </section>
+
+                </div>
+
+            </div>
+
+            <!-- Eco Impact - Animated Scenes -->
+            <section
+                class="rounded-3xl p-8 shadow-lg bg-gradient-to-br from-green-50/80 to-emerald-50/60 backdrop-blur-sm border border-green-100/50"
+                id="eco-card">
+                <div class="flex justify-between items-center mb-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                            <span class="material-icons-round text-green-600">eco</span> Environmental Impact
+                        </h2>
+                        <p class="text-sm text-gray-500 mt-1">Estimated footprint based on travel modes</p>
+                    </div>
+                    <button onclick="shareCard('eco-card')"
+                        class="text-gray-400 hover:text-blue-600 transition-colors p-2 bg-white rounded-full shadow-sm"
+                        title="Share">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="eco-impact-grid"></div>
+            </section>
+
+            <!-- Cities & Places -->
+            <div class="space-y-12">
+                <!-- Cities -->
+                <section>
+                    <div class="flex items-center gap-4 mb-6 px-2">
+                        <h2 class="text-2xl font-bold text-gray-800">Top Cities</h2>
+                        <div class="h-px bg-gray-300 flex-1"></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4" id="cities-grid"></div>
+                </section>
+
+                <!-- Places -->
+                <section>
+                    <div class="flex items-center gap-4 mb-6 px-2">
+                        <h2 class="text-2xl font-bold text-gray-800">Memorable Places</h2>
+                        <div class="h-px bg-gray-300 flex-1"></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="places-grid"></div>
+                </section>
+            </div>
 
             <!-- Travel Summary (Globe) -->
             <section class="glass rounded-3xl p-8 shadow-lg border border-white/50 relative overflow-hidden"
@@ -896,129 +1400,6 @@
                     </div>
                 </div>
             </section>
-
-            <!-- Detailed Stats Grid -->
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
-
-                <!-- Travel Modes -->
-                <section class="glass rounded-3xl p-6 shadow-lg border border-white/50 xl:col-span-1 flex flex-col"
-                    id="travel-modes-card">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-xl font-bold text-gray-900">How You Move</h3>
-                        <button onclick="shareCard('travel-modes-card')"
-                            class="text-gray-400 hover:text-blue-600 transition-colors" title="Share">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
-                                </path>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1" id="travel-trends-grid">
-                        <!-- Content -->
-                    </div>
-                </section>
-
-                <!-- Visit Trends -->
-                <section class="glass rounded-3xl p-6 shadow-lg border border-white/50 xl:col-span-1 flex flex-col"
-                    id="visit-trends-card">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-xl font-bold text-gray-900">Top Spots</h3>
-                        <button onclick="shareCard('visit-trends-card')"
-                            class="text-gray-400 hover:text-blue-600 transition-colors" title="Share">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
-                                </path>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1" id="visit-trends-grid">
-                        <!-- Content -->
-                    </div>
-                </section>
-
-                <!-- Stats Column -->
-                <div class="flex flex-col gap-6 xl:col-span-1">
-
-                    <!-- Time -->
-                    <section class="glass rounded-3xl p-6 shadow-lg border border-white/50" id="time-card">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-bold text-gray-900">Time Spent</h3>
-                            <button onclick="shareCard('time-card')"
-                                class="text-gray-400 hover:text-blue-600 transition-colors" title="Share">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
-                                    </path>
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="time-distribution-stats" class="space-y-6"></div>
-                    </section>
-
-                    <!-- Records -->
-                    <section class="glass rounded-3xl p-6 shadow-lg border border-white/50" id="records-card">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-bold text-gray-900">Personal Records</h3>
-                            <button onclick="shareCard('records-card')"
-                                class="text-gray-400 hover:text-blue-600 transition-colors" title="Share">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
-                                    </path>
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="record-breakers-stats" class="space-y-4"></div>
-                    </section>
-
-                </div>
-
-            </div>
-
-            <!-- Eco Impact -->
-            <section class="glass rounded-3xl p-8 shadow-lg border border-white/50" id="eco-card">
-                <div class="flex justify-between items-center mb-8">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                            <span class="material-icons-round text-green-600">eco</span> Environmental Impact
-                        </h2>
-                        <p class="text-sm text-gray-500 mt-1">Estimated footprint based on travel modes</p>
-                    </div>
-                    <button onclick="shareCard('eco-card')"
-                        class="text-gray-400 hover:text-blue-600 transition-colors p-2 bg-white rounded-full shadow-sm"
-                        title="Share">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
-                            </path>
-                        </svg>
-                    </button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="eco-impact-grid"></div>
-            </section>
-
-            <!-- Cities & Places -->
-            <div class="space-y-12">
-                <!-- Cities -->
-                <section>
-                    <div class="flex items-center gap-4 mb-6 px-2">
-                        <h2 class="text-2xl font-bold text-gray-800">Top Cities</h2>
-                        <div class="h-px bg-gray-300 flex-1"></div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4" id="cities-grid"></div>
-                </section>
-
-                <!-- Places -->
-                <section>
-                    <div class="flex items-center gap-4 mb-6 px-2">
-                        <h2 class="text-2xl font-bold text-gray-800">Memorable Places</h2>
-                        <div class="h-px bg-gray-300 flex-1"></div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="places-grid"></div>
-                </section>
-            </div>
 
             <!-- All Time Stats Footer -->
             <section class="mt-16 bg-gray-900 rounded-3xl p-10 text-white shadow-2xl relative overflow-hidden"

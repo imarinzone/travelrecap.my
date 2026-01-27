@@ -25,6 +25,18 @@ const tileLayers = {
 
 // Initialize map
 function initMap() {
+    // Check if Leaflet is loaded
+    if (typeof L === 'undefined') {
+        console.error('Leaflet library not loaded');
+        const errorMsg = 'Map library failed to load. Please check your internet connection.';
+        if (typeof showShareToast === 'function') {
+            showShareToast(errorMsg, 'error');
+        } else {
+            alert(errorMsg);
+        }
+        return;
+    }
+
     // Load saved style preference
     const savedStyle = localStorage.getItem('mapStyle');
     if (savedStyle === 'dark' || savedStyle === 'light') {
@@ -104,10 +116,10 @@ function handleFileUpload(event) {
         try {
             const json = JSON.parse(e.target.result);
             processAndRenderData(json);
-            statusSpan.textContent = `Loaded data successfully`;
+            timelineUtils.Logger.info('Loaded data successfully');
             statusSpan.className = 'text-sm font-medium text-green-600';
         } catch (error) {
-            console.error('Error parsing JSON:', error);
+            timelineUtils.Logger.error('Error parsing JSON:', error);
             statusSpan.textContent = 'Error parsing JSON file';
             statusSpan.className = 'text-sm font-medium text-red-600';
         }
@@ -117,6 +129,7 @@ function handleFileUpload(event) {
 
 // Process Google Timeline JSON & Update UI
 function processAndRenderData(json) {
+    timelineUtils.Logger.time('Data Processing');
     // Use the utility to process raw JSON
     const processed = timelineUtils.processTimelineData(json);
 
@@ -124,7 +137,8 @@ function processAndRenderData(json) {
     allLocations = processed.allLocations;
     const years = processed.years;
 
-    console.log(`Parsed ${allLocations.length} locations`);
+    timelineUtils.Logger.info(`Parsed ${allLocations.length} locations`);
+    timelineUtils.Logger.timeEnd('Data Processing');
 
     // Calculate initial stats to get countries for the globe
     const initialStats = timelineUtils.calculateStats(allSegments);
@@ -217,6 +231,9 @@ function renderDashboard() {
         dashboard.classList.remove('hidden');
         // Initialize globe scroll animation
         initGlobeScrollAnimation();
+
+        // Initialize general scroll animations for stats
+        initScrollAnimations();
     }
 }
 
@@ -224,14 +241,26 @@ function renderEcoImpact(ecoStats) {
     const grid = document.getElementById('eco-impact-grid');
     grid.innerHTML = '';
 
-    // Total CO2
+    // Total CO2 - with footprint animation
     const totalKg = Math.round(ecoStats.totalCo2 / 1000);
     const treesNeeded = Math.ceil(totalKg / 25); // Approx 25kg CO2 per tree per year
 
-    grid.appendChild(createStatCard('Est. Carbon Footprint', `${totalKg} kg CO₂`, 'co2'));
-    grid.appendChild(createStatCard('Trees to Offset', `${treesNeeded} trees`, 'forest'));
+    grid.appendChild(createAnimatedStatScene({
+        title: 'Est. Carbon Footprint',
+        value: `${totalKg} kg CO₂`,
+        sceneType: 'eco-footprint',
+        data: { totalKg }
+    }));
 
-    // Top Emitter
+    // Trees to Offset - with tree planting animation
+    grid.appendChild(createAnimatedStatScene({
+        title: 'Trees to Offset',
+        value: `${treesNeeded} trees`,
+        sceneType: 'trees',
+        data: { count: Math.min(treesNeeded, 6) }
+    }));
+
+    // Top Emitter - with factory/smoke animation
     let topEmitter = 'None';
     let maxVal = 0;
     for (const [type, val] of Object.entries(ecoStats.breakdown)) {
@@ -240,7 +269,12 @@ function renderEcoImpact(ecoStats) {
             topEmitter = type.replace('IN_', '').replace('_', ' ');
         }
     }
-    grid.appendChild(createStatCard('Primary Source', topEmitter, 'factory'));
+    grid.appendChild(createAnimatedStatScene({
+        title: 'Primary Source',
+        value: topEmitter,
+        sceneType: 'factory',
+        data: { maxVal }
+    }));
 }
 
 function renderTimeDistribution(timeStats) {
@@ -254,33 +288,9 @@ function renderTimeDistribution(timeStats) {
     const movingPct = Math.round((timeStats.moving / timeStats.total) * 100) || 0;
     const stationaryPct = Math.round((timeStats.stationary / timeStats.total) * 100) || 0;
 
-    container.innerHTML = `
-        <div class="flex items-center justify-between">
-            <span class="text-gray-600">Stationary (Visits)</span>
-            <span class="font-bold relative group cursor-help">
-                ${stationaryPct}%
-                <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    ${Math.round(stationaryHours)} hours
-                </span>
-            </span>
-        </div>
-        <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
-            <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${stationaryPct}%"></div>
-        </div>
-
-        <div class="flex items-center justify-between">
-            <span class="text-gray-600">On the Move (Travel)</span>
-             <span class="font-bold relative group cursor-help">
-                ${movingPct}%
-                 <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    ${Math.round(movingHours)} hours
-                </span>
-            </span>
-        </div>
-        <div class="w-full bg-gray-200 rounded-full h-2.5">
-            <div class="bg-green-500 h-2.5 rounded-full" style="width: ${movingPct}%"></div>
-        </div>
-    `;
+    // Use the new animated time distribution scene
+    const timeScene = createTimeDistributionScene(movingPct, stationaryPct, movingHours, stationaryHours);
+    container.appendChild(timeScene);
 }
 
 function renderRecordBreakers(records) {
@@ -290,27 +300,9 @@ function renderRecordBreakers(records) {
     const driveKm = (records.longestDrive / 1000).toFixed(1);
     const walkKm = (records.longestWalk / 1000).toFixed(1);
 
-    container.innerHTML = `
-        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <div class="flex items-center gap-3">
-                <span class="material-icons-round text-blue-500 text-3xl">directions_car</span>
-                <div>
-                    <p class="text-sm text-gray-500">Longest Drive</p>
-                    <p class="font-bold text-gray-900">${driveKm} km</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <div class="flex items-center gap-3">
-                <span class="material-icons-round text-green-500 text-3xl">directions_walk</span>
-                <div>
-                    <p class="text-sm text-gray-500">Longest Walk</p>
-                    <p class="font-bold text-gray-900">${walkKm} km</p>
-                </div>
-            </div>
-        </div>
-    `;
+    // Animated record breaker scenes
+    container.appendChild(createRecordBreakerScene('drive', driveKm, 'km'));
+    container.appendChild(createRecordBreakerScene('walk', walkKm, 'km'));
 }
 
 // Heuristic to extract city and country from address strings
@@ -328,18 +320,39 @@ function renderStatistics(stats) {
     const grid = document.getElementById('statistics-grid');
     grid.innerHTML = '';
 
-    // Total Distance
+    // Total Distance - with plane/travel animation
     const distanceKm = Math.round(stats.totalDistanceMeters / 1000);
-    grid.appendChild(createStatCard('Total Distance', `${distanceKm.toLocaleString()} km`, 'commute'));
+    grid.appendChild(createAnimatedStatScene({
+        title: 'Total Distance',
+        value: `${distanceKm.toLocaleString()} km`,
+        sceneType: 'distance',
+        data: { distanceKm }
+    }));
 
-    // Total Visits
-    grid.appendChild(createStatCard('Places Visited', stats.totalVisits.toLocaleString(), 'place'));
+    // Total Visits - with pin drop animation
+    grid.appendChild(createAnimatedStatScene({
+        title: 'Places Visited',
+        value: stats.totalVisits.toLocaleString(),
+        sceneType: 'places',
+        data: { count: stats.totalVisits }
+    }));
 
-    // Cities visited
-    grid.appendChild(createStatCard('Cities Visited', stats.cities.size.toLocaleString(), 'location_city'));
+    // Cities visited - with city skyline animation
+    const cityCount = stats.cities.size;
+    grid.appendChild(createAnimatedStatScene({
+        title: 'Cities Visited',
+        value: cityCount.toLocaleString(),
+        sceneType: 'city',
+        data: { count: cityCount }
+    }));
 
-    // Countries visited
-    grid.appendChild(createStatCard('Countries Visited', stats.countries.size.toLocaleString(), 'public'));
+    // Countries visited - with globe animation
+    grid.appendChild(createAnimatedStatScene({
+        title: 'Countries Visited',
+        value: stats.countries.size.toLocaleString(),
+        sceneType: 'globe',
+        data: { count: stats.countries.size }
+    }));
 }
 
 function createStatCard(title, value, iconName) {
@@ -356,6 +369,412 @@ function createStatCard(title, value, iconName) {
         </div>
     `;
     return div;
+}
+
+// ===== ANIMATED STAT SCENE SYSTEM =====
+
+/**
+ * Creates an SVG scene layer based on the scene type
+ */
+function createSceneLayer(sceneType, data = {}) {
+    const layer = document.createElement('div');
+    layer.className = 'stat-scene-layer';
+
+    switch (sceneType) {
+        case 'plane':
+            layer.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-br from-sky-100 to-blue-200">
+                    <svg class="absolute w-16 h-16 text-blue-500 animate-plane-glide" viewBox="0 0 24 24" fill="currentColor" style="top: 30%; left: 0;">
+                        <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+                    </svg>
+                    <div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-blue-300/30 to-transparent"></div>
+                </div>
+            `;
+            break;
+
+        case 'car':
+            layer.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-br from-slate-100 to-gray-200">
+                    <div class="absolute bottom-4 left-0 right-0 h-1 bg-gray-400/50"></div>
+                    <svg class="absolute w-12 h-12 text-blue-600 animate-car-drive" viewBox="0 0 24 24" fill="currentColor" style="bottom: 8px; left: 0;">
+                        <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+                    </svg>
+                </div>
+            `;
+            break;
+
+        case 'train':
+            layer.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-br from-orange-50 to-amber-100">
+                    <div class="absolute bottom-4 left-0 right-0 h-1 bg-amber-400/50"></div>
+                    <svg class="absolute w-12 h-12 text-amber-600 animate-train-drive" viewBox="0 0 24 24" fill="currentColor" style="bottom: 8px; left: 0;">
+                        <path d="M12 2c-4 0-8 .5-8 4v9.5C4 17.43 5.57 19 7.5 19L6 20.5v.5h2.23l2-2H14l2 2h2v-.5L16.5 19c1.93 0 3.5-1.57 3.5-3.5V6c0-3.5-3.58-4-8-4zM7.5 17c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm3.5-6H6V8h5v3zm2 0V8h5v3h-5zm3.5 6c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                    </svg>
+                </div>
+            `;
+            break;
+
+        case 'bus':
+            layer.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-100">
+                    <div class="absolute bottom-4 left-0 right-0 h-1 bg-emerald-400/50"></div>
+                    <svg class="absolute w-12 h-12 text-emerald-600 animate-car-drive" viewBox="0 0 24 24" fill="currentColor" style="bottom: 8px; left: 0;">
+                        <path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z"/>
+                    </svg>
+                </div>
+            `;
+            break;
+
+        case 'walking':
+            layer.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-br from-green-50 to-teal-100">
+                    <div class="absolute bottom-2 left-0 right-0 h-2 bg-gradient-to-r from-green-200/50 via-green-300/50 to-green-200/50 rounded-full"></div>
+                    <svg class="absolute w-10 h-10 text-teal-600 animate-walk-cycle" viewBox="0 0 24 24" fill="currentColor" style="bottom: 12px; left: 0;">
+                        <path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7"/>
+                    </svg>
+                    <!-- Dust particles -->
+                    <div class="absolute bottom-3 left-1/4 w-1 h-1 bg-teal-300 rounded-full opacity-50 animate-ping"></div>
+                    <div class="absolute bottom-3 left-1/2 w-1 h-1 bg-teal-300 rounded-full opacity-50 animate-ping animation-delay-300"></div>
+                </div>
+            `;
+            break;
+
+        case 'cycling':
+            layer.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-br from-lime-50 to-green-100">
+                    <div class="absolute bottom-4 left-0 right-0 h-1 bg-green-400/50"></div>
+                    <svg class="absolute w-12 h-12 text-green-600 animate-bike-ride" viewBox="0 0 24 24" fill="currentColor" style="bottom: 8px; left: 0;">
+                        <path d="M15.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zm5.8-10l2.4-2.4.8.8c1.3 1.3 3 2.1 5.1 2.1V9c-1.5 0-2.7-.6-3.6-1.5l-1.9-1.9c-.5-.4-1-.6-1.6-.6s-1.1.2-1.4.6L7.8 8.4c-.4.4-.6.9-.6 1.4 0 .6.2 1.1.6 1.4L11 14v5h2v-6.2l-2.2-2.3zM19 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5z"/>
+                    </svg>
+                </div>
+            `;
+            break;
+
+        case 'motorcycle':
+            layer.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-br from-red-50 to-orange-100">
+                    <div class="absolute bottom-4 left-0 right-0 h-1 bg-orange-400/50"></div>
+                    <svg class="absolute w-12 h-12 text-orange-600 animate-car-drive" viewBox="0 0 24 24" fill="currentColor" style="bottom: 8px; left: 0;">
+                        <path d="M19.44 9.03L15.41 5H11v2h3.59l2 2H5c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.46 0 4.45-1.69 4.9-4h1.65l2.77-2.77c-.21.54-.32 1.14-.32 1.77 0 2.8 2.2 5 5 5s5-2.2 5-5c0-2.65-1.97-4.77-4.56-4.97zM7.82 15C7.4 16.15 6.28 17 5 17c-1.63 0-3-1.37-3-3s1.37-3 3-3c1.28 0 2.4.85 2.82 2H5v2h2.82zM19 17c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/>
+                    </svg>
+                </div>
+            `;
+            break;
+
+        case 'city':
+            const buildingCount = Math.min(Math.max(data.count || 3, 3), 8);
+            let buildings = '';
+            for (let i = 0; i < buildingCount; i++) {
+                const height = 30 + Math.random() * 40;
+                const width = 12 + Math.random() * 8;
+                const left = (i * (100 / buildingCount)) + Math.random() * 5;
+                const delay = i * 100;
+                const windows = Math.floor(height / 12);
+                let windowsHtml = '';
+                for (let w = 0; w < windows; w++) {
+                    windowsHtml += `<div class="w-1 h-1 bg-yellow-300 rounded-sm animate-window-twinkle" style="animation-delay: ${w * 300 + delay}ms"></div>`;
+                }
+                buildings += `
+                    <div class="absolute bottom-0 bg-gradient-to-t from-slate-600 to-slate-500 rounded-t-sm animate-city-breathe flex flex-col items-center justify-end gap-1 pb-1" 
+                         style="height: ${height}%; width: ${width}%; left: ${left}%; animation-delay: ${delay}ms;">
+                        ${windowsHtml}
+                    </div>
+                `;
+            }
+            layer.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-b from-indigo-100 via-purple-50 to-slate-200">
+                    ${buildings}
+                    <div class="absolute bottom-0 left-0 right-0 h-2 bg-slate-400"></div>
+                </div>
+            `;
+            break;
+
+        case 'places':
+            layer.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-br from-rose-50 to-pink-100">
+                    <svg class="absolute w-8 h-8 text-rose-500 animate-pin-drop" viewBox="0 0 24 24" fill="currentColor" style="top: 20%; left: 25%;">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                    <svg class="absolute w-6 h-6 text-rose-400 animate-pin-drop animation-delay-200" viewBox="0 0 24 24" fill="currentColor" style="top: 35%; left: 60%;">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                    <svg class="absolute w-5 h-5 text-rose-300 animate-pin-drop animation-delay-500" viewBox="0 0 24 24" fill="currentColor" style="top: 50%; left: 40%;">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                </div>
+            `;
+            break;
+
+        case 'globe':
+            layer.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-br from-blue-100 to-indigo-200">
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 animate-orbital-float shadow-lg">
+                        <div class="absolute inset-2 rounded-full border-2 border-blue-200/50"></div>
+                        <div class="absolute top-1/2 left-0 right-0 h-0.5 bg-blue-200/50 -translate-y-1/2"></div>
+                    </div>
+                </div>
+            `;
+            break;
+
+        case 'trees':
+            const treeCount = Math.min(Math.max(data.count || 3, 2), 6);
+            let trees = '';
+            for (let i = 0; i < treeCount; i++) {
+                const height = 40 + Math.random() * 30;
+                const left = 10 + (i * (80 / treeCount)) + Math.random() * 5;
+                const delay = i * 200;
+                trees += `
+                    <div class="absolute bottom-2" style="left: ${left}%; animation-delay: ${delay}ms;">
+                        <div class="animate-tree-grow" style="animation-delay: ${delay}ms;">
+                            <svg class="w-8 h-12 text-green-600 animate-tree-sway" style="animation-delay: ${delay + 500}ms;" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2L4 12h3v8h2v-8h2l-3-4h2l-3-4h2l-3-4zm-1 14h2v6h-2v-6z"/>
+                            </svg>
+                        </div>
+                    </div>
+                `;
+            }
+            layer.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-b from-sky-100 to-green-100">
+                    ${trees}
+                    <div class="absolute bottom-0 left-0 right-0 h-3 bg-gradient-to-t from-amber-700 to-amber-600 rounded-t"></div>
+                </div>
+            `;
+            break;
+
+        case 'eco-footprint':
+            layer.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-br from-gray-100 to-slate-200">
+                    <div class="absolute bottom-4 left-1/2 -translate-x-1/2">
+                        <svg class="w-16 h-16 text-slate-400 animate-character-breathe" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-2 18h4v-6h3l-3-9H9l-3 9h3v6z"/>
+                        </svg>
+                    </div>
+                    <!-- CO2 cloud -->
+                    <div class="absolute top-4 right-4 w-8 h-5 bg-gray-400/50 rounded-full animate-smoke-puff"></div>
+                    <div class="absolute top-6 right-8 w-6 h-4 bg-gray-400/40 rounded-full animate-smoke-puff animation-delay-500"></div>
+                </div>
+            `;
+            break;
+
+        case 'factory':
+            layer.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-br from-orange-50 to-red-100">
+                    <div class="absolute bottom-0 left-1/4 w-12 h-16 bg-gradient-to-t from-gray-600 to-gray-500 rounded-t">
+                        <div class="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-6 bg-gray-700 rounded-t"></div>
+                    </div>
+                    <!-- Smoke -->
+                    <div class="absolute top-4 left-1/3 w-4 h-4 bg-gray-400 rounded-full animate-smoke-puff"></div>
+                    <div class="absolute top-6 left-1/3 w-3 h-3 bg-gray-300 rounded-full animate-smoke-puff animation-delay-300"></div>
+                    <div class="absolute top-8 left-1/4 w-5 h-5 bg-gray-400 rounded-full animate-smoke-puff animation-delay-700"></div>
+                </div>
+            `;
+            break;
+
+        case 'stationary':
+            layer.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-100">
+                    <div class="absolute bottom-4 left-1/2 -translate-x-1/2">
+                        <!-- Person sitting on bench -->
+                        <div class="relative animate-character-breathe">
+                            <svg class="w-12 h-12 text-indigo-500" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z"/>
+                            </svg>
+                        </div>
+                        <!-- Bench -->
+                        <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-14 h-1.5 bg-amber-700 rounded"></div>
+                    </div>
+                </div>
+            `;
+            break;
+
+        case 'moving':
+            layer.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-100">
+                    <div class="absolute bottom-2 left-0 right-0 h-1 bg-emerald-300/50 rounded-full"></div>
+                    <svg class="absolute w-10 h-10 text-emerald-600 animate-walk-cycle" viewBox="0 0 24 24" fill="currentColor" style="bottom: 8px; left: 0;">
+                        <path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7"/>
+                    </svg>
+                </div>
+            `;
+            break;
+
+        case 'distance':
+            layer.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-br from-blue-100 to-cyan-100">
+                    <svg class="absolute inset-0 w-full h-full" viewBox="0 0 100 60" preserveAspectRatio="none">
+                        <path d="M0,50 Q25,30 50,40 T100,35" stroke="#60a5fa" stroke-width="2" fill="none" stroke-dasharray="4 2" class="animate-road-dash"/>
+                    </svg>
+                    <svg class="absolute w-8 h-8 text-blue-600 animate-plane-glide" viewBox="0 0 24 24" fill="currentColor" style="top: 20%; left: 0;">
+                        <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+                    </svg>
+                </div>
+            `;
+            break;
+
+        default:
+            layer.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-br from-gray-100 to-slate-200"></div>
+            `;
+    }
+
+    return layer;
+}
+
+/**
+ * Creates an animated stat scene container with background animation and content overlay
+ */
+function createAnimatedStatScene({ title, value, subtitle, sceneType, data = {} }) {
+    const container = document.createElement('div');
+    container.className = 'stat-scene opacity-0 scroll-trigger transform hover:scale-[1.02] transition-transform duration-300 shadow-lg';
+
+    // Create the animated background layer
+    const sceneLayer = createSceneLayer(sceneType, data);
+    container.appendChild(sceneLayer);
+
+    // Create the content overlay
+    const content = document.createElement('div');
+    content.className = 'stat-scene-content bg-gradient-to-t from-black/40 via-black/20 to-transparent';
+    content.innerHTML = `
+        <p class="text-xs font-semibold text-white/80 uppercase tracking-wider drop-shadow-sm">${title}</p>
+        <p class="text-2xl font-bold text-white drop-shadow-md">${value}</p>
+        ${subtitle ? `<p class="text-xs text-white/70 drop-shadow-sm">${subtitle}</p>` : ''}
+    `;
+    container.appendChild(content);
+
+    return container;
+}
+
+/**
+ * Creates an animated transport mode card for travel trends
+ */
+function createTransportSceneCard(type, distanceKm, durationHours) {
+    let sceneType = 'car';
+    let label = type;
+
+    switch (type) {
+        case 'IN_PASSENGER_VEHICLE': sceneType = 'car'; label = 'Car'; break;
+        case 'WALKING': sceneType = 'walking'; label = 'Walking'; break;
+        case 'IN_TRAIN': sceneType = 'train'; label = 'Train'; break;
+        case 'IN_BUS': sceneType = 'bus'; label = 'Bus'; break;
+        case 'FLYING': sceneType = 'plane'; label = 'Flying'; break;
+        case 'CYCLING': sceneType = 'cycling'; label = 'Cycling'; break;
+        case 'MOTORCYCLING': sceneType = 'motorcycle'; label = 'Motorbike'; break;
+        default: sceneType = 'car'; label = type.replace('IN_', '').replace(/_/g, ' ');
+    }
+
+    return createAnimatedStatScene({
+        title: label,
+        value: `${distanceKm.toLocaleString()} km`,
+        subtitle: `${durationHours} hrs`,
+        sceneType: sceneType,
+        data: { distanceKm, durationHours }
+    });
+}
+
+/**
+ * Creates an animated time distribution scene with sitting vs walking figures
+ */
+function createTimeDistributionScene(movingPct, stationaryPct, movingHours, stationaryHours) {
+    const container = document.createElement('div');
+    container.className = 'space-y-4';
+
+    // Stationary scene
+    const stationaryScene = document.createElement('div');
+    stationaryScene.className = 'relative overflow-hidden rounded-xl h-24 opacity-0 scroll-trigger';
+    const stationaryOpacity = 0.5 + (stationaryPct / 200);
+    stationaryScene.innerHTML = `
+        <div class="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-100">
+            <div class="absolute bottom-2 left-6">
+                <div class="relative animate-character-breathe" style="opacity: ${stationaryOpacity}">
+                    <svg class="w-10 h-10 text-indigo-500" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z"/>
+                    </svg>
+                </div>
+                <div class="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-12 h-1 bg-amber-700 rounded"></div>
+            </div>
+        </div>
+        <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+        <div class="absolute bottom-0 left-0 right-0 p-3 flex items-center justify-between">
+            <span class="text-white font-medium text-sm drop-shadow">Stationary</span>
+            <div class="text-right">
+                <span class="text-white font-bold text-lg drop-shadow">${stationaryPct}%</span>
+                <span class="text-white/70 text-xs block drop-shadow">${Math.round(stationaryHours)} hrs</span>
+            </div>
+        </div>
+        <div class="absolute top-0 left-0 right-0 h-1 bg-white/20">
+            <div class="h-full bg-indigo-400 transition-all duration-1000" style="width: ${stationaryPct}%"></div>
+        </div>
+    `;
+    container.appendChild(stationaryScene);
+
+    // Moving scene
+    const movingScene = document.createElement('div');
+    movingScene.className = 'relative overflow-hidden rounded-xl h-24 opacity-0 scroll-trigger';
+    // Add a slight delay via data attribute or just let the observer stagger naturally if they are separate
+    // Or we can add a specific class for delay if needed, but let's stick to simple first.
+    // To maintain the staggered feel, we can add a data-delay attribute if we want to get fancy with the observer,
+    // but the original had animation-delay-200 class. We can keep that class, but it applies to the animation which is now triggered by the class addition.
+    // So if we add the animation class later, the delay will still apply.
+    movingScene.classList.add('animation-delay-200');
+
+    const movingOpacity = 0.5 + (movingPct / 200);
+    movingScene.innerHTML = `
+        <div class="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-100">
+            <div class="absolute bottom-1 left-0 right-0 h-1 bg-emerald-300/50 rounded-full"></div>
+            <svg class="absolute w-8 h-8 text-emerald-600 animate-walk-cycle" viewBox="0 0 24 24" fill="currentColor" style="bottom: 8px; left: 0; opacity: ${movingOpacity}">
+                <path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7"/>
+            </svg>
+        </div>
+        <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+        <div class="absolute bottom-0 left-0 right-0 p-3 flex items-center justify-between">
+            <span class="text-white font-medium text-sm drop-shadow">On the Move</span>
+            <div class="text-right">
+                <span class="text-white font-bold text-lg drop-shadow">${movingPct}%</span>
+                <span class="text-white/70 text-xs block drop-shadow">${Math.round(movingHours)} hrs</span>
+            </div>
+        </div>
+        <div class="absolute top-0 left-0 right-0 h-1 bg-white/20">
+            <div class="h-full bg-emerald-400 transition-all duration-1000" style="width: ${movingPct}%"></div>
+        </div>
+    `;
+    container.appendChild(movingScene);
+
+    return container;
+}
+
+/**
+ * Creates an animated record breaker scene
+ */
+function createRecordBreakerScene(type, value, unit) {
+    const container = document.createElement('div');
+    container.className = 'relative overflow-hidden rounded-xl h-20 opacity-0 scroll-trigger transform hover:scale-[1.02] transition-transform duration-300';
+
+    const isWalk = type === 'walk';
+    const bgGradient = isWalk ? 'from-green-50 to-teal-100' : 'from-slate-100 to-blue-100';
+    const iconColor = isWalk ? 'text-teal-600' : 'text-blue-600';
+    const animClass = isWalk ? 'animate-walk-cycle' : 'animate-car-drive';
+    const barColor = isWalk ? 'bg-teal-400' : 'bg-blue-400';
+
+    const icon = isWalk
+        ? `<path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7"/>`
+        : `<path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>`;
+
+    container.innerHTML = `
+        <div class="absolute inset-0 bg-gradient-to-br ${bgGradient}">
+            <div class="absolute bottom-2 left-0 right-0 h-0.5 bg-gray-400/30"></div>
+            <svg class="absolute w-8 h-8 ${iconColor} ${animClass}" viewBox="0 0 24 24" fill="currentColor" style="bottom: 6px; left: 0;">
+                ${icon}
+            </svg>
+        </div>
+        <div class="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent"></div>
+        <div class="absolute bottom-0 left-0 right-0 p-3 flex items-center justify-between">
+            <span class="text-white font-medium text-sm drop-shadow">${isWalk ? 'Longest Walk' : 'Longest Drive'}</span>
+            <span class="text-white font-bold text-lg drop-shadow">${value} ${unit}</span>
+        </div>
+        <div class="absolute top-0 left-0 right-0 h-1 ${barColor}"></div>
+    `;
+
+    return container;
 }
 
 // Share Card Functionality
@@ -454,11 +873,11 @@ window.shareCard = async function (elementId) {
         }
     } catch (error) {
         if (error.name === 'AbortError') {
-            console.log('Share canceled by user');
+            timelineUtils.Logger.warn('Share canceled by user');
             if (btn) btn.innerHTML = originalContent;
             return;
         }
-        console.error('Error sharing image:', error);
+        timelineUtils.Logger.error('Error sharing image:', error);
         if (btn) btn.innerHTML = '<span class="flex items-center gap-2"><span class="material-icons-round text-sm">error</span> Error</span>';
         showShareToast('Could not share. Please try again.', 'error');
     } finally {
@@ -505,34 +924,14 @@ function renderTravelTrends(transportStats) {
         .sort(([, a], [, b]) => b.distanceMeters - a.distanceMeters)
         .slice(0, 6);
 
-    sortedTransport.forEach(([type, data]) => {
+    sortedTransport.forEach(([type, data], index) => {
         const distanceKm = Math.round(data.distanceMeters / 1000);
         const durationHours = Math.round(data.durationMs / (1000 * 60 * 60));
 
-        const card = document.createElement('div');
-        card.className = 'flex items-center justify-between p-4 bg-white/50 rounded-xl hover:bg-white/80 transition-colors border border-white/40';
-
-        let iconStub = 'help_outline';
-        let label = type;
-
-        if (type === 'IN_PASSENGER_VEHICLE') { iconStub = 'directions_car'; label = 'Car'; }
-        else if (type === 'WALKING') { iconStub = 'directions_walk'; label = 'Walking'; }
-        else if (type === 'IN_TRAIN') { iconStub = 'train'; label = 'Train'; }
-        else if (type === 'IN_BUS') { iconStub = 'directions_bus'; label = 'Bus'; }
-        else if (type === 'FLYING') { iconStub = 'flight'; label = 'Flying'; }
-        else if (type === 'CYCLING') { iconStub = 'directions_bike'; label = 'Cycling'; }
-        else if (type === 'MOTORCYCLING') { iconStub = 'two_wheeler'; label = 'Motorbike'; }
-
-        card.innerHTML = `
-            <div class="flex items-center gap-4">
-                <span class="material-icons-round text-2xl bg-white p-2 rounded-lg shadow-sm text-gray-700">${iconStub}</span>
-                <span class="font-semibold text-gray-700">${label}</span>
-            </div>
-            <div class="text-right">
-                <div class="text-base font-bold text-gray-900">${distanceKm.toLocaleString()} km</div>
-                <div class="text-xs text-gray-500 font-medium">${durationHours} hrs</div>
-            </div>
-        `;
+        // Create animated transport scene card
+        const card = createTransportSceneCard(type, distanceKm, durationHours);
+        // Add staggered animation delay
+        card.style.animationDelay = `${index * 100}ms`;
         grid.appendChild(card);
     });
 }
@@ -690,7 +1089,7 @@ function renderMarkers() {
     }
 
     if (filteredLocations.length === 0) {
-        console.warn('No locations found for selected year');
+        timelineUtils.Logger.warn('No locations found for selected year');
         return;
     }
 
@@ -718,7 +1117,7 @@ function renderMarkers() {
         markers.addLayer(marker);
     });
 
-    console.log(`Rendered ${filteredLocations.length} markers`);
+    timelineUtils.Logger.info(`Rendered ${filteredLocations.length} markers`);
 }
 
 // Build popup content for marker
@@ -967,4 +1366,43 @@ function initGlobeScrollAnimation() {
     });
 
     isGlobeScrollInitialized = true;
+}
+
+/**
+ * Initializes IntersectionObserver to trigger animations on scroll
+ */
+function initScrollAnimations() {
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px' // Trigger slightly before element is fully in view
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const element = entry.target;
+
+                // Add the animation class
+                element.classList.add('animate-scene-emerge');
+
+                // Remove opacity-0 so it becomes visible (animation handles opacity too, but this is a safe fallback)
+                element.classList.remove('opacity-0');
+
+                // Stop observing this element
+                observer.unobserve(element);
+            }
+        });
+    }, observerOptions);
+
+    // Observe all elements with the scroll-trigger class
+    // We use a timeout to ensure DOM is fully updated
+    setTimeout(() => {
+        const triggers = document.querySelectorAll('.scroll-trigger');
+        triggers.forEach(trigger => {
+            // Only observe if not already animated
+            if (!trigger.classList.contains('animate-scene-emerge')) {
+                observer.observe(trigger);
+            }
+        });
+    }, 100);
 }

@@ -2,5 +2,310 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===== ANIMATED STAT SCENE KEYFRAMES ===== */
 
+/* Plane flying diagonally across */
+@keyframes plane-glide {
+  0% {
+    transform: translate(-20%, 80%) rotate(-25deg) scale(0.8);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(120%, -20%) rotate(-25deg) scale(1);
+    opacity: 0;
+  }
+}
+
+/* Car driving horizontally */
+@keyframes car-drive {
+  0% {
+    transform: translateX(-30%);
+  }
+  100% {
+    transform: translateX(130%);
+  }
+}
+
+/* Train moving horizontally (slightly faster) */
+@keyframes train-drive {
+  0% {
+    transform: translateX(-40%);
+  }
+  100% {
+    transform: translateX(140%);
+  }
+}
+
+/* Walking human step cycle */
+@keyframes walk-cycle {
+  0%, 100% {
+    transform: translateX(-20%) translateY(0);
+  }
+  25% {
+    transform: translateX(10%) translateY(-3px);
+  }
+  50% {
+    transform: translateX(40%) translateY(0);
+  }
+  75% {
+    transform: translateX(70%) translateY(-3px);
+  }
+}
+
+/* Cycling animation */
+@keyframes bike-ride {
+  0% {
+    transform: translateX(-25%) rotate(0deg);
+  }
+  50% {
+    transform: translateX(50%) rotate(2deg);
+  }
+  100% {
+    transform: translateX(125%) rotate(0deg);
+  }
+}
+
+/* City skyline breathing/bobbing */
+@keyframes city-breathe {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-3px) scale(1.02);
+  }
+}
+
+/* Building window lights twinkling */
+@keyframes window-twinkle {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Tree growing from ground */
+@keyframes tree-grow {
+  0% {
+    transform: scaleY(0) translateY(100%);
+    opacity: 0;
+  }
+  60% {
+    transform: scaleY(1.1) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleY(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Tree swaying gently */
+@keyframes tree-sway {
+  0%, 100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+/* Factory smoke puffs */
+@keyframes smoke-puff {
+  0% {
+    transform: translateY(0) scale(0.5);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-30px) scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Character breathing (sitting/idle) */
+@keyframes character-breathe {
+  0%, 100% {
+    transform: scale(1) translateY(0);
+  }
+  50% {
+    transform: scale(1.02) translateY(-2px);
+  }
+}
+
+/* Globe-inspired orbital float */
+@keyframes orbital-float {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(5px, -5px) scale(1.02);
+  }
+  50% {
+    transform: translate(0, -8px) scale(1);
+  }
+  75% {
+    transform: translate(-5px, -5px) scale(1.02);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+/* Pin drop animation for places */
+@keyframes pin-drop {
+  0% {
+    transform: translateY(-50px) scale(0.5);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(5px) scale(1.1);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(-3px) scale(0.95);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Scene fade-in from background */
+@keyframes scene-emerge {
+  0% {
+    transform: scale(0.8) translateZ(-50px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateZ(0);
+    opacity: 1;
+  }
+}
+
+/* Pulse glow effect */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(59, 130, 246, 0.6);
+  }
+}
+
+/* Road/path dashes moving */
+@keyframes road-dash {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -40;
+  }
+}
+
+/* ===== ANIMATION UTILITY CLASSES ===== */
+@layer utilities {
+  .animate-plane-glide {
+    animation: plane-glide 8s ease-in-out infinite;
+  }
+  .animate-car-drive {
+    animation: car-drive 6s linear infinite;
+  }
+  .animate-train-drive {
+    animation: train-drive 5s linear infinite;
+  }
+  .animate-walk-cycle {
+    animation: walk-cycle 4s ease-in-out infinite;
+  }
+  .animate-bike-ride {
+    animation: bike-ride 5s ease-in-out infinite;
+  }
+  .animate-city-breathe {
+    animation: city-breathe 4s ease-in-out infinite;
+  }
+  .animate-window-twinkle {
+    animation: window-twinkle 2s ease-in-out infinite;
+  }
+  .animate-tree-grow {
+    animation: tree-grow 2s ease-out forwards;
+    transform-origin: bottom center;
+  }
+  .animate-tree-sway {
+    animation: tree-sway 3s ease-in-out infinite;
+    transform-origin: bottom center;
+  }
+  .animate-smoke-puff {
+    animation: smoke-puff 3s ease-out infinite;
+  }
+  .animate-character-breathe {
+    animation: character-breathe 3s ease-in-out infinite;
+  }
+  .animate-orbital-float {
+    animation: orbital-float 6s ease-in-out infinite;
+  }
+  .animate-pin-drop {
+    animation: pin-drop 0.8s ease-out forwards;
+  }
+  .animate-scene-emerge {
+    animation: scene-emerge 0.6s ease-out forwards;
+  }
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  .animate-road-dash {
+    animation: road-dash 1s linear infinite;
+  }
+
+  /* Staggered animation delays */
+  .animation-delay-100 { animation-delay: 100ms; }
+  .animation-delay-200 { animation-delay: 200ms; }
+  .animation-delay-300 { animation-delay: 300ms; }
+  .animation-delay-500 { animation-delay: 500ms; }
+  .animation-delay-700 { animation-delay: 700ms; }
+  .animation-delay-1000 { animation-delay: 1000ms; }
+
+  /* Stat scene container styles */
+  .stat-scene {
+    @apply relative overflow-hidden rounded-2xl min-h-[140px];
+    perspective: 1000px;
+  }
+
+  .stat-scene-layer {
+    @apply absolute inset-0 pointer-events-none;
+  }
+
+  .stat-scene-content {
+    @apply relative z-10 p-6 flex flex-col justify-end h-full;
+  }
+}
+
+/* ===== REDUCED MOTION SUPPORT ===== */
+@media (prefers-reduced-motion: reduce) {
+  .animate-plane-glide,
+  .animate-car-drive,
+  .animate-train-drive,
+  .animate-walk-cycle,
+  .animate-bike-ride,
+  .animate-city-breathe,
+  .animate-window-twinkle,
+  .animate-tree-grow,
+  .animate-tree-sway,
+  .animate-smoke-puff,
+  .animate-character-breathe,
+  .animate-orbital-float,
+  .animate-pin-drop,
+  .animate-scene-emerge,
+  .animate-pulse-glow,
+  .animate-road-dash {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
 
