@@ -5,6 +5,7 @@ let currentStyle = 'light';
 let selectedYear = null;
 let allLocations = []; // Store loaded locations for filtering
 let allSegments = []; // Store all timeline segments (visits and activities)
+let globe = null; // Globe instance
 
 // CartoDB Tile Layer URLs
 const tileLayers = {
@@ -125,6 +126,21 @@ function processAndRenderData(json) {
 
     console.log(`Parsed ${allLocations.length} locations`);
 
+    // Calculate initial stats to get countries for the globe
+    const initialStats = timelineUtils.calculateStats(allSegments);
+
+    // Initialize or update Globe
+    const globeContainer = document.getElementById('globe-container');
+    if (globeContainer) {
+        globeContainer.innerHTML = ''; // Clear previous globe
+        const visitedCountries = Array.from(initialStats.countries);
+        globe = new Globe('globe-container', visitedCountries);
+
+        // Fade in
+        globeContainer.classList.remove('opacity-0');
+        globeContainer.classList.add('opacity-100');
+    }
+
     // Initialize UI with data
     initializeYearFilter(years);
 
@@ -160,6 +176,7 @@ function renderDashboard() {
 
     // 3. Calculate Stats using Utility
     const stats = timelineUtils.calculateStats(statsSegments);
+
     const allTimeStats = timelineUtils.calculateStats(allSegments);
     const advancedStats = timelineUtils.calculateAdvancedStats(statsSegments);
 
@@ -321,10 +338,47 @@ function createStatCard(title, value, iconName) {
 }
 
 // Share Card Functionality
-window.shareCard = function (elementId) {
+function showShareToast(message, tone = 'info') {
+    const toast = document.createElement('div');
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: ${tone === 'error' ? '#fee2e2' : tone === 'success' ? '#dcfce7' : '#f3f4f6'};
+        color: ${tone === 'error' ? '#991b1b' : tone === 'success' ? '#166534' : '#111827'};
+        padding: 10px 14px;
+        border-radius: 10px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        font-size: 12px;
+        z-index: 9999;
+        opacity: 1;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(10px)';
+    }, 2500);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = url;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+window.shareCard = async function (elementId) {
     const node = document.getElementById(elementId);
     if (!node) return;
 
+    const fileImages = node.querySelectorAll('img[src^="file://"]');
+    const hasFileImages = fileImages.length > 0;
     const btn = node.querySelector('button[onclick^="shareCard"]');
     const originalContent = btn ? btn.innerHTML : '';
     if (btn) btn.innerHTML = '<span>⏳ Generating...</span>';
@@ -333,31 +387,63 @@ window.shareCard = function (elementId) {
     const originalTransform = node.style.transform;
     node.style.transform = 'none';
 
-    htmlToImage.toPng(node, {
-        backgroundColor: '#f5f7fa', // Light background for the image
-        pixelRatio: 2, // High resolution
-        style: {
-            margin: '0',
-            transform: 'none'
+    try {
+        if (hasFileImages && window.location.protocol === 'file:') {
+            showShareToast('Local images cannot be captured from file://. Run a local server for full capture.', 'info');
         }
-    })
-        .then(function (dataUrl) {
-            const link = document.createElement('a');
-            link.download = `travel-recap-${new Date().getTime()}.png`;
-            link.href = dataUrl;
-            link.click();
 
-            if (btn) btn.innerHTML = '<span>✅ Saved!</span>';
-            setTimeout(() => { if (btn) btn.innerHTML = originalContent; }, 2000);
-        })
-        .catch(function (error) {
-            console.error('Error generating image:', error);
-            if (btn) btn.innerHTML = '<span>❌ Error</span>';
-            setTimeout(() => { if (btn) btn.innerHTML = originalContent; }, 2000);
-        })
-        .finally(() => {
-            node.style.transform = originalTransform;
+        const blob = await htmlToImage.toBlob(node, {
+            backgroundColor: '#f5f7fa', // Light background for the image
+            pixelRatio: 2, // High resolution
+            filter: (domNode) => {
+                if (domNode.tagName === 'IMG') {
+                    const src = domNode.getAttribute('src') || '';
+                    if (src.startsWith('file://')) {
+                        return false;
+                    }
+                }
+                return true;
+            },
+            style: {
+                margin: '0',
+                transform: 'none'
+            }
         });
+
+        if (!blob) {
+            throw new Error('Image capture failed.');
+        }
+
+        const filename = `travel-recap-${new Date().getTime()}.png`;
+        const file = new File([blob], filename, { type: blob.type || 'image/png' });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            if (btn) btn.innerHTML = '<span>📤 Sharing...</span>';
+            await navigator.share({
+                files: [file],
+                title: 'Travel Recap',
+                text: 'My travel recap stats.'
+            });
+            if (btn) btn.innerHTML = '<span>✅ Shared!</span>';
+            showShareToast('Shared. You can post it to Instagram from the share sheet.', 'success');
+        } else {
+            triggerDownload(blob, filename);
+            if (btn) btn.innerHTML = '<span>✅ Saved!</span>';
+            showShareToast('Downloaded. Upload to Instagram manually.', 'info');
+        }
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            console.log('Share canceled by user');
+            if (btn) btn.innerHTML = originalContent;
+            return;
+        }
+        console.error('Error sharing image:', error);
+        if (btn) btn.innerHTML = '<span>❌ Error</span>';
+        showShareToast('Could not share. Please try again.', 'error');
+    } finally {
+        node.style.transform = originalTransform;
+        setTimeout(() => { if (btn) btn.innerHTML = originalContent; }, 2000);
+    }
 };
 
 function renderTravelSummary(stats) {
