@@ -4,7 +4,9 @@
   "description": "Your travel recap using Google Maps Timeline data.",
   "main": "script.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "build:css": "tailwindcss -i ./src/tailwind.css -o ./dist/tailwind.css --minify",
+    "watch:css": "tailwindcss -i ./src/tailwind.css -o ./dist/tailwind.css --watch"
   },
   "repository": {
     "type": "git",

@@ -85,7 +85,7 @@ function initializeYearFilter(availableYears) {
         localStorage.setItem('mapYear', selectedYear);
 
         // Update title to reflect year
-        document.getElementById('header-title').textContent = `Im, here's your ${selectedYear} Timeline update`;
+        document.getElementById('header-title').textContent = `Here's your ${selectedYear} Timeline update`;
     }
 }
 
@@ -169,9 +169,9 @@ function renderDashboard() {
             if (!s.startTime) return false;
             return new Date(s.startTime).getFullYear() === currentYear;
         });
-        document.getElementById('header-title').textContent = `Im, here's your ${currentYear} Timeline update`;
+        document.getElementById('header-title').textContent = `Here's your ${currentYear} Timeline update`;
     } else {
-        document.getElementById('header-title').textContent = `Im, here's your Timeline update`;
+        document.getElementById('header-title').textContent = `Here's your Timeline update`;
     }
 
     // 3. Calculate Stats using Utility
@@ -197,6 +197,8 @@ function renderDashboard() {
     const dashboard = document.getElementById('dashboard-content');
     if (dashboard) {
         dashboard.classList.remove('hidden');
+        // Initialize globe scroll animation
+        initGlobeScrollAnimation();
     }
 }
 
@@ -869,4 +871,72 @@ if (document.readyState === 'loading') {
     if (fileInput) {
         fileInput.addEventListener('change', handleFileUpload);
     }
+}
+
+// Globe Scroll Animation
+let isGlobeScrollInitialized = false;
+
+function initGlobeScrollAnimation() {
+    if (isGlobeScrollInitialized) return;
+
+    const container = document.getElementById('globe-container');
+    const summaryCard = document.getElementById('travel-summary-card');
+
+    if (!container || !summaryCard) return;
+
+    // Find the target image to dock onto
+    const targetImg = summaryCard.querySelector('img[alt="Globe"]');
+    if (!targetImg) return;
+
+    // Apply smooth transition for the movement
+    // We animate top/left/width/height/opacity
+    container.style.transition = 'all 1s cubic-bezier(0.645, 0.045, 0.355, 1.000)';
+
+    let isDocked = false;
+
+    window.addEventListener('scroll', () => {
+        const targetRect = targetImg.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+        // Calculate the absolute position of the target image in the document
+        const targetAbsoluteTop = targetRect.top + scrollTop;
+        const targetAbsoluteLeft = targetRect.left + (window.pageXOffset || document.body.scrollLeft);
+
+        // Trigger when target is likely coming into view
+        if (targetRect.top < viewportHeight * 0.85) {
+            if (!isDocked) {
+                isDocked = true;
+
+                // Dock to the absolute position on page
+                container.style.position = 'absolute';
+                container.style.top = `${targetAbsoluteTop}px`;
+                container.style.left = `${targetAbsoluteLeft}px`;
+                container.style.width = `${targetRect.width}px`;
+                container.style.height = `${targetRect.height}px`;
+                container.style.opacity = '1';
+                container.style.zIndex = '50';
+
+                targetImg.style.opacity = '0';
+                targetImg.style.transition = 'opacity 0.3s';
+            }
+        } else {
+            if (isDocked) {
+                isDocked = false;
+
+                // Reset to fixed background
+                container.style.position = 'fixed';
+                container.style.top = '5rem';
+                container.style.left = '0';
+                container.style.width = '500px';
+                container.style.height = '500px';
+                container.style.opacity = '0.5';
+                container.style.zIndex = '0';
+
+                targetImg.style.opacity = '1';
+            }
+        }
+    });
+
+    isGlobeScrollInitialized = true;
 }
