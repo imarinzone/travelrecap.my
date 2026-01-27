@@ -5,8 +5,8 @@
   "main": "script.js",
   "scripts": {
     "test": "jest",
-    "build:css": "tailwindcss -i ./src/tailwind.css -o ./dist/tailwind.css --minify",
-    "watch:css": "tailwindcss -i ./src/tailwind.css -o ./dist/tailwind.css --watch"
+    "build:css": "node ./tailwindcss -i ./src/tailwind.css -o ./dist/tailwind.css --minify",
+    "watch:css": "node ./tailwindcss -i ./src/tailwind.css -o ./dist/tailwind.css --watch"
   },
   "repository": {
     "type": "git",
@@ -20,6 +20,9 @@
   },
   "homepage": "https://github.com/imarinzone/travelrecap.my#readme",
   "devDependencies": {
-    "jest": "^30.2.0"
+    "autoprefixer": "^10.4.23",
+    "jest": "^30.2.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.18"
   }
 }

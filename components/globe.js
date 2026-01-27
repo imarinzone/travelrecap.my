@@ -137,7 +137,8 @@ class Globe {
 
     updateContainerTransform() {
         // Smooth translation and orbital motion via CSS
-        if (this.container) {
+        // Skip movement while the globe is "docked" into the summary card
+        if (this.container && this.container.dataset.docked !== 'true') {
             const p = this.scrollProgress;
 
             // Adjust these values to control the movement path

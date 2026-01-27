@@ -153,6 +153,24 @@ function processAndRenderData(json) {
     }
 
     renderDashboard();
+
+    // Hide initial upload section once data is successfully parsed and rendered
+    const uploadSection = document.getElementById('upload-section');
+    if (uploadSection) {
+        uploadSection.classList.add('hidden');
+    }
+
+    // Reveal "Upload a new file" action in the footer
+    const restartButton = document.getElementById('restart-button');
+    if (restartButton) {
+        restartButton.classList.remove('hidden');
+    }
+
+    // Smooth-scroll to the dashboard area
+    const dashboard = document.getElementById('dashboard-content');
+    if (dashboard && typeof dashboard.scrollIntoView === 'function') {
+        dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 // Main render function that updates all sections based on selectedYear
@@ -275,7 +293,7 @@ function renderRecordBreakers(records) {
     container.innerHTML = `
         <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div class="flex items-center gap-3">
-                <span class="text-2xl">🚗</span>
+                <span class="material-icons-round text-blue-500 text-3xl">directions_car</span>
                 <div>
                     <p class="text-sm text-gray-500">Longest Drive</p>
                     <p class="font-bold text-gray-900">${driveKm} km</p>
@@ -285,7 +303,7 @@ function renderRecordBreakers(records) {
         
         <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div class="flex items-center gap-3">
-                <span class="text-2xl">🚶</span>
+                <span class="material-icons-round text-green-500 text-3xl">directions_walk</span>
                 <div>
                     <p class="text-sm text-gray-500">Longest Walk</p>
                     <p class="font-bold text-gray-900">${walkKm} km</p>
@@ -317,9 +335,11 @@ function renderStatistics(stats) {
     // Total Visits
     grid.appendChild(createStatCard('Places Visited', stats.totalVisits.toLocaleString(), 'place'));
 
-    // Top City (Most visited)
-    // Always show Cities Visited even if 0, correctly reflecting data
+    // Cities visited
     grid.appendChild(createStatCard('Cities Visited', stats.cities.size.toLocaleString(), 'location_city'));
+
+    // Countries visited
+    grid.appendChild(createStatCard('Countries Visited', stats.countries.size.toLocaleString(), 'public'));
 }
 
 function createStatCard(title, value, iconName) {
@@ -328,8 +348,7 @@ function createStatCard(title, value, iconName) {
     div.className = 'glass rounded-2xl p-6 shadow-sm flex items-center transform hover:scale-105 transition-transform duration-300';
     div.innerHTML = `
         <div class="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600 mr-4 shadow-inner">
-            <span class="material-icons" style="font-size: 28px;">${iconName}</span> 
-            ${iconName === 'commute' ? '🚗' : iconName === 'place' ? '📍' : '🏙️'}
+            <span class="material-icons-round" style="font-size: 28px;">${iconName}</span> 
         </div>
         <div>
             <p class="text-sm font-medium text-gray-500 uppercase tracking-wide">${title}</p>
@@ -383,7 +402,7 @@ window.shareCard = async function (elementId) {
     const hasFileImages = fileImages.length > 0;
     const btn = node.querySelector('button[onclick^="shareCard"]');
     const originalContent = btn ? btn.innerHTML : '';
-    if (btn) btn.innerHTML = '<span>⏳ Generating...</span>';
+    if (btn) btn.innerHTML = '<span class="flex items-center gap-2"><span class="animate-spin material-icons-round text-sm">refresh</span> Converting...</span>';
 
     // Temporary style adjustments for better capture
     const originalTransform = node.style.transform;
@@ -420,17 +439,17 @@ window.shareCard = async function (elementId) {
         const file = new File([blob], filename, { type: blob.type || 'image/png' });
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            if (btn) btn.innerHTML = '<span>📤 Sharing...</span>';
+            if (btn) btn.innerHTML = '<span class="flex items-center gap-2"><span class="material-icons-round text-sm">ios_share</span> Sharing...</span>';
             await navigator.share({
                 files: [file],
                 title: 'Travel Recap',
                 text: 'My travel recap stats.'
             });
-            if (btn) btn.innerHTML = '<span>✅ Shared!</span>';
+            if (btn) btn.innerHTML = '<span class="flex items-center gap-2"><span class="material-icons-round text-sm">check_circle</span> Shared!</span>';
             showShareToast('Shared. You can post it to Instagram from the share sheet.', 'success');
         } else {
             triggerDownload(blob, filename);
-            if (btn) btn.innerHTML = '<span>✅ Saved!</span>';
+            if (btn) btn.innerHTML = '<span class="flex items-center gap-2"><span class="material-icons-round text-sm">download_done</span> Saved!</span>';
             showShareToast('Downloaded. Upload to Instagram manually.', 'info');
         }
     } catch (error) {
@@ -440,7 +459,7 @@ window.shareCard = async function (elementId) {
             return;
         }
         console.error('Error sharing image:', error);
-        if (btn) btn.innerHTML = '<span>❌ Error</span>';
+        if (btn) btn.innerHTML = '<span class="flex items-center gap-2"><span class="material-icons-round text-sm">error</span> Error</span>';
         showShareToast('Could not share. Please try again.', 'error');
     } finally {
         node.style.transform = originalTransform;
@@ -452,21 +471,28 @@ function renderTravelSummary(stats) {
     const worldPercentage = document.getElementById('world-percentage');
     const description = document.getElementById('travel-description');
 
-    if (stats.countries.size > 0) {
-        const coverage = Math.min((stats.countries.size / 195) * 100 * 5, 100).toFixed(1);
-        worldPercentage.textContent = `${coverage}%`;
-        const count = stats.countries.size;
-        const cityCount = stats.cities.size;
+    // Calculate coverage based on Earth's diameter and total distance traveled
+    const EARTH_DIAMETER_KM = 12742; // Approximate mean Earth diameter in km
+    const distanceKm = stats.totalDistanceMeters / 1000;
+
+    const coverage = distanceKm > 0
+        ? Math.min((distanceKm / EARTH_DIAMETER_KM) * 100, 100).toFixed(1)
+        : '0.0';
+
+    worldPercentage.textContent = `${coverage}%`;
+
+    const countryCount = stats.countries.size;
+    const cityCount = stats.cities.size;
+
+    if (countryCount > 0 || cityCount > 0) {
         description.innerHTML = `
-            You've explored <strong>${count} countries</strong> and <strong>${cityCount} cities</strong>.<br>
-            Covering a total of <strong>${Math.round(stats.totalDistanceMeters / 1000).toLocaleString()} km</strong>.
+            You've explored <strong>${countryCount} countries</strong> and <strong>${cityCount} cities</strong> this period.<br>
+            That's about <strong>${coverage}%</strong> of Earth's diameter, over <strong>${Math.round(distanceKm).toLocaleString()} km</strong>.
         `;
     } else {
-        // Fallback when no country data
-        worldPercentage.textContent = '--%';
         description.innerHTML = `
-            Covering a total of <strong>${Math.round(stats.totalDistanceMeters / 1000).toLocaleString()} km</strong>.<br>
-            <span class="text-xs text-gray-400">Location names missing from data source.</span>
+            You've travelled about <strong>${Math.round(distanceKm).toLocaleString()} km</strong> this period,<br>
+            which is roughly <strong>${coverage}%</strong> of Earth's diameter.
         `;
     }
 }
@@ -486,20 +512,20 @@ function renderTravelTrends(transportStats) {
         const card = document.createElement('div');
         card.className = 'flex items-center justify-between p-4 bg-white/50 rounded-xl hover:bg-white/80 transition-colors border border-white/40';
 
-        let icon = '❓';
+        let iconStub = 'help_outline';
         let label = type;
 
-        if (type === 'IN_PASSENGER_VEHICLE') { icon = '🚗'; label = 'Car'; }
-        else if (type === 'WALKING') { icon = '🚶'; label = 'Walking'; }
-        else if (type === 'IN_TRAIN') { icon = '🚆'; label = 'Train'; }
-        else if (type === 'IN_BUS') { icon = '🚌'; label = 'Bus'; }
-        else if (type === 'FLYING') { icon = '✈️'; label = 'Flying'; }
-        else if (type === 'CYCLING') { icon = '🚴'; label = 'Cycling'; }
-        else if (type === 'MOTORCYCLING') { icon = '🏍️'; label = 'Motorbike'; }
+        if (type === 'IN_PASSENGER_VEHICLE') { iconStub = 'directions_car'; label = 'Car'; }
+        else if (type === 'WALKING') { iconStub = 'directions_walk'; label = 'Walking'; }
+        else if (type === 'IN_TRAIN') { iconStub = 'train'; label = 'Train'; }
+        else if (type === 'IN_BUS') { iconStub = 'directions_bus'; label = 'Bus'; }
+        else if (type === 'FLYING') { iconStub = 'flight'; label = 'Flying'; }
+        else if (type === 'CYCLING') { iconStub = 'directions_bike'; label = 'Cycling'; }
+        else if (type === 'MOTORCYCLING') { iconStub = 'two_wheeler'; label = 'Motorbike'; }
 
         card.innerHTML = `
             <div class="flex items-center gap-4">
-                <span class="text-2xl bg-white p-2 rounded-lg shadow-sm">${icon}</span>
+                <span class="material-icons-round text-2xl bg-white p-2 rounded-lg shadow-sm text-gray-700">${iconStub}</span>
                 <span class="font-semibold text-gray-700">${label}</span>
             </div>
             <div class="text-right">
@@ -567,7 +593,7 @@ function renderHighlights(visitStats, segments) {
             card.className = 'glass rounded-xl p-5 shadow-sm hover:shadow-lg transition-all transform hover:-translate-y-1';
             card.innerHTML = `
                  <div class="w-full h-32 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg mb-4 flex items-center justify-center text-indigo-300">
-                    <span class="text-5xl drop-shadow-sm">📍</span>
+                    <span class="material-icons-round text-5xl drop-shadow-sm">place</span>
                 </div>
                 <h3 class="font-bold text-gray-900 mb-1 truncate text-lg" title="${place.name}">${place.name}</h3>
                 <div class="flex justify-between items-center mt-3">
@@ -607,7 +633,7 @@ function renderHighlights(visitStats, segments) {
             card.className = 'glass rounded-xl p-5 shadow-sm flex items-center gap-4 hover:shadow-lg transition-all';
             card.innerHTML = `
                 <div class="p-3 bg-gradient-to-br from-purple-100 to-pink-100 text-purple-600 rounded-xl shadow-inner">
-                    <span class="text-2xl">🏙️</span>
+                    <span class="material-icons-round text-2xl">location_city</span>
                 </div>
                 <div>
                     <h3 class="font-bold text-gray-900 text-lg leading-tight">${city}</h3>
@@ -813,7 +839,7 @@ function handleFullscreenChange() {
     const fullscreenBtn = document.getElementById('map-fullscreen');
 
     if (isFullscreen) {
-        fullscreenIcon.textContent = '⛶';
+        fullscreenIcon.textContent = 'fullscreen_exit';
         if (fullscreenText) fullscreenText.textContent = 'Exit';
         fullscreenBtn.setAttribute('title', 'Exit fullscreen');
         // Resize map after entering fullscreen
@@ -821,7 +847,7 @@ function handleFullscreenChange() {
             map.invalidateSize();
         }, 100);
     } else {
-        fullscreenIcon.textContent = '⛶';
+        fullscreenIcon.textContent = 'fullscreen';
         if (fullscreenText) fullscreenText.textContent = 'Fullscreen';
         fullscreenBtn.setAttribute('title', 'Toggle fullscreen');
         // Resize map after exiting fullscreen
@@ -909,6 +935,7 @@ function initGlobeScrollAnimation() {
                 isDocked = true;
 
                 // Dock to the absolute position on page
+                container.dataset.docked = 'true';
                 container.style.position = 'absolute';
                 container.style.top = `${targetAbsoluteTop}px`;
                 container.style.left = `${targetAbsoluteLeft}px`;
@@ -925,6 +952,7 @@ function initGlobeScrollAnimation() {
                 isDocked = false;
 
                 // Reset to fixed background
+                delete container.dataset.docked;
                 container.style.position = 'fixed';
                 container.style.top = '5rem';
                 container.style.left = '0';

@@ -12,13 +12,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet"
         crossorigin="anonymous">
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
     <!-- Open Graph Meta Tags -->
     <meta property="og:title" content="Your Travel Recap" />
     <meta property="og:description"
         content="Visualize your Google Timeline data with beautiful interactive maps and stats. 100% private and client-side." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="images/globe.png" />
 
     <!-- Leaflet CSS (Inlined for file:// compatibility) -->
     <style>
@@ -831,7 +832,7 @@
                 <div
                     class="p-6 border-b border-gray-100/50 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2">
-                        <span>🗺️</span> Interactive Map
+                        <span class="material-icons-round text-blue-600">map</span> Interactive Map
                     </h2>
 
                     <div class="flex flex-wrap items-center gap-3 bg-gray-100/50 p-1.5 rounded-xl">
@@ -847,12 +848,12 @@
                         <div class="h-4 w-[1px] bg-gray-300"></div>
                         <button id="map-fullscreen" class="p-2 text-gray-500 hover:text-blue-600 transition-colors"
                             title="Toggle Fullscreen">
-                            <span id="fullscreen-icon">⛶</span>
+                            <span id="fullscreen-icon" class="material-icons-round">fullscreen</span>
                         </button>
                         <div class="h-4 w-[1px] bg-gray-300"></div>
                         <button onclick="shareCard('map-container-wrapper')"
                             class="p-2 text-gray-500 hover:text-blue-600 transition-colors" title="Share Map">
-                            <span class="font-bold">📤</span>
+                            <span class="material-icons-round">ios_share</span>
                         </button>
                     </div>
                 </div>
@@ -871,14 +872,12 @@
             <section class="glass rounded-3xl p-8 shadow-lg border border-white/50 relative overflow-hidden"
                 id="travel-summary-card">
                 <div class="relative z-10 flex flex-col md:flex-row items-center gap-12">
-                    <div class="relative group cursor-pointer" onclick="shareCard('travel-summary-card')">
+                    <div class="relative group cursor-pointer w-48 h-48 flex items-center justify-center rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10"
+                        onclick="shareCard('travel-summary-card')">
                         <div
                             class="absolute -inset-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full opacity-20 blur-xl group-hover:opacity-30 transition-opacity">
                         </div>
-                        <img src="images/globe.png" alt="Globe"
-                            class="w-48 h-48 object-contain drop-shadow-2xl relative z-10"
-                            onerror="this.style.display='none'" />
-                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <div class="relative z-10 flex flex-col items-center justify-center pointer-events-none">
                             <span class="text-4xl font-black text-gray-900 drop-shadow-sm"
                                 id="world-percentage">--%</span>
                             <span class="text-xs font-bold text-gray-600 tracking-wider uppercase">World Covered</span>
@@ -892,7 +891,7 @@
                         </p>
                         <button onclick="shareCard('travel-summary-card')"
                             class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 mt-2">
-                            <span>📤 Share Summary</span>
+                            <span class="material-icons-round text-sm">ios_share</span> <span>Share Summary</span>
                         </button>
                     </div>
                 </div>
@@ -983,7 +982,7 @@
                 <div class="flex justify-between items-center mb-8">
                     <div>
                         <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                            🌿 Environmental Impact
+                            <span class="material-icons-round text-green-600">eco</span> Environmental Impact
                         </h2>
                         <p class="text-sm text-gray-500 mt-1">Estimated footprint based on travel modes</p>
                     </div>
@@ -1024,9 +1023,6 @@
             <!-- All Time Stats Footer -->
             <section class="mt-16 bg-gray-900 rounded-3xl p-10 text-white shadow-2xl relative overflow-hidden"
                 id="all-time-card">
-                <div class="absolute top-0 right-0 p-10 opacity-10">
-                    <img src="images/globe.png" class="w-64 h-64 grayscale invert" />
-                </div>
                 <div class="relative z-10">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10">
                         <h2 class="text-3xl font-bold">Lifetime Stats</h2>
@@ -1043,7 +1039,12 @@
 
         </div>
 
-        <footer class="mt-20 text-center text-gray-400 text-sm pb-10">
+        <footer class="mt-20 text-center text-gray-400 text-sm pb-10 space-y-4">
+            <button id="restart-button" onclick="window.location.reload()"
+                class="hidden inline-flex items-center gap-2 px-4 py-2 bg-white/60 text-gray-800 rounded-xl font-medium hover:bg-white shadow-sm border border-white/70 transition-colors">
+                <span class="material-icons-round text-sm">restart_alt</span>
+                <span>Upload a new file</span>
+            </button>
             <p>Built with ❤️ • Your data never leaves this browser.</p>
         </footer>
 
