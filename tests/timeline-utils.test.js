@@ -44,23 +44,6 @@ describe('Timeline Utilities', () => {
             expect(stats.transport['IN_PASSENGER_VEHICLE'].durationMs).toBe(3600000);
         });
 
-        test('should extract cities from address', () => {
-            const segments = [
-                {
-                    visit: {
-                        topCandidate: {
-                            placeId: '1',
-                            placeLocation: { address: 'Springfield, IL, USA' }
-                        }
-                    }
-                }
-            ];
-            const stats = timelineUtils.calculateStats(segments);
-            // extractLocationDetails logic: parts[length-3] or length-2
-            // "Springfield", "IL", "USA" -> Springfield
-            expect(stats.cities.has('Springfield')).toBe(true);
-            expect(stats.countries.has('USA')).toBe(true);
-        });
     });
 
     describe('calculateAdvancedStats', () => {

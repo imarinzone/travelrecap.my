@@ -91,7 +91,7 @@ function initMap() {
     setupFullscreenListeners();
 }
 
-// Initialize year filter as horizontal timeline
+// Initialize year filter as modern horizontal timeline
 function initializeYearFilter(availableYears) {
     const timelineContainer = document.getElementById('timeline-years');
     const timelineSelectorContainer = document.getElementById('timeline-selector-container');
@@ -109,31 +109,26 @@ function initializeYearFilter(availableYears) {
         timelineSelectorContainer.classList.add('flex');
     }
     
-    // Add "All Years" button first
+    // Add "All" button first
     const allYearsBtn = document.createElement('button');
-    allYearsBtn.className = 'timeline-all-years mr-3' + (!selectedYear ? ' active' : '');
+    allYearsBtn.className = 'timeline-year-btn' + (!selectedYear ? ' active' : '');
     allYearsBtn.textContent = 'All';
     allYearsBtn.dataset.year = '';
     allYearsBtn.addEventListener('click', () => selectTimelineYear(''));
     timelineContainer.appendChild(allYearsBtn);
 
-    // Create year points
-    availableYears.forEach((year, index) => {
-        const yearPoint = document.createElement('button');
-        yearPoint.className = 'timeline-year-point w-8 h-8 flex-shrink-0';
+    // Create year buttons
+    availableYears.forEach((year) => {
+        const yearBtn = document.createElement('button');
+        yearBtn.className = 'timeline-year-btn';
         if (selectedYear && parseInt(selectedYear) === year) {
-            yearPoint.classList.add('active');
+            yearBtn.classList.add('active');
         }
-        yearPoint.dataset.year = year;
-        yearPoint.addEventListener('click', () => selectTimelineYear(year.toString()));
+        yearBtn.dataset.year = year;
+        yearBtn.textContent = year;
+        yearBtn.addEventListener('click', () => selectTimelineYear(year.toString()));
         
-        // Add label
-        const label = document.createElement('span');
-        label.className = 'timeline-year-label';
-        label.textContent = year;
-        yearPoint.appendChild(label);
-        
-        timelineContainer.appendChild(yearPoint);
+        timelineContainer.appendChild(yearBtn);
     });
 
     // If we have years and no selected year (or invalid one), select the most recent one
@@ -169,23 +164,14 @@ function updateTimelineSelection() {
     const timelineContainer = document.getElementById('timeline-years');
     if (!timelineContainer) return;
     
-    // Update all years button
-    const allYearsBtn = timelineContainer.querySelector('.timeline-all-years');
-    if (allYearsBtn) {
-        if (!selectedYear) {
-            allYearsBtn.classList.add('active');
+    // Update all year buttons
+    const yearBtns = timelineContainer.querySelectorAll('.timeline-year-btn');
+    yearBtns.forEach(btn => {
+        const btnYear = btn.dataset.year;
+        if (btnYear === (selectedYear || '')) {
+            btn.classList.add('active');
         } else {
-            allYearsBtn.classList.remove('active');
-        }
-    }
-    
-    // Update year points
-    const yearPoints = timelineContainer.querySelectorAll('.timeline-year-point');
-    yearPoints.forEach(point => {
-        if (point.dataset.year === selectedYear) {
-            point.classList.add('active');
-        } else {
-            point.classList.remove('active');
+            btn.classList.remove('active');
         }
     });
 }
@@ -342,6 +328,9 @@ function handleFileUpload(event) {
     }
 
     const statusSpan = document.getElementById('upload-status');
+    if (!statusSpan) {
+        return;
+    }
     statusSpan.textContent = 'Parsing...';
 
     const reader = new FileReader();
@@ -353,14 +342,25 @@ function handleFileUpload(event) {
         setTimeout(() => {
             try {
                 const json = JSON.parse(e.target.result);
+                
+                // Validate JSON structure
+                if (!json.semanticSegments) {
+                    const keys = Object.keys(json).join(', ');
+                    throw new Error(`Invalid JSON structure. Expected 'semanticSegments' but found keys: ${keys.substring(0, 200)}`);
+                }
+                if (!Array.isArray(json.semanticSegments)) {
+                    throw new Error(`'semanticSegments' should be an array but got: ${typeof json.semanticSegments}`);
+                }
+                
                 processAndRenderData(json);
                 timelineUtils.Logger.info('Loaded data successfully');
                 statusSpan.className = 'text-sm font-medium text-green-600';
                 statusSpan.textContent = 'Done!';
             } catch (error) {
                 timelineUtils.Logger.error('Error parsing JSON:', error);
-                statusSpan.textContent = 'Error parsing JSON file';
-                statusSpan.className = 'text-sm font-medium text-red-600';
+                // Show detailed error message
+                statusSpan.innerHTML = `<span class="block">Error: ${error.message}</span>`;
+                statusSpan.className = 'text-sm font-medium text-red-600 max-w-md';
             } finally {
                 hideLoadingScreen();
             }
@@ -468,6 +468,10 @@ function renderDashboard() {
     renderEcoImpact(advancedStats.eco);
     renderTimeDistribution(advancedStats.time);
     renderRecordBreakers(advancedStats.records);
+    
+    // 6. Render Transport Breakdown and Top Places (new typography sections)
+    renderTransportBreakdown(stats.transport);
+    renderTopPlacesSection(stats.visits);
 
     // 6. Reveal Dashboard
     const dashboard = document.getElementById('dashboard-content');
@@ -482,121 +486,254 @@ function renderDashboard() {
 }
 
 function renderEcoImpact(ecoStats) {
-    const grid = document.getElementById('eco-impact-grid');
-    grid.innerHTML = '';
-
-    // Total CO2 - with footprint animation
+    // Update Typography Story Section for Eco
     const totalKg = Math.round(ecoStats.totalCo2 / 1000);
     const treesNeeded = Math.ceil(totalKg / 25); // Approx 25kg CO2 per tree per year
-
-    grid.appendChild(createAnimatedStatScene({
-        title: 'Est. Carbon Footprint',
-        value: `${totalKg} kg CO₂`,
-        sceneType: 'eco-footprint',
-        data: { totalKg }
-    }));
-
-    // Trees to Offset - with tree planting animation
-    grid.appendChild(createAnimatedStatScene({
-        title: 'Trees to Offset',
-        value: `${treesNeeded} trees`,
-        sceneType: 'trees',
-        data: { count: Math.min(treesNeeded, 6) }
-    }));
-
-    // Top Emitter - with factory/smoke animation
-    let topEmitter = 'None';
-    let maxVal = 0;
-    for (const [type, val] of Object.entries(ecoStats.breakdown)) {
-        if (val > maxVal) {
-            maxVal = val;
-            topEmitter = type.replace('IN_', '').replace('_', ' ');
-        }
+    
+    // Eco CO2 story element
+    const ecoCo2El = document.getElementById('stat-eco-co2');
+    if (ecoCo2El) {
+        ecoCo2El.textContent = `${totalKg.toLocaleString()} kg CO₂`;
     }
-    grid.appendChild(createAnimatedStatScene({
-        title: 'Primary Source',
-        value: topEmitter,
-        sceneType: 'factory',
-        data: { maxVal }
-    }));
+    
+    // Trees count element
+    const treesCountEl = document.getElementById('stat-trees-count');
+    if (treesCountEl) {
+        treesCountEl.textContent = treesNeeded.toLocaleString();
+    }
+    
+    // Keep backward compatibility with hidden grid
+    const grid = document.getElementById('eco-impact-grid');
+    if (grid) {
+        grid.innerHTML = '';
+    }
 }
 
 function renderTimeDistribution(timeStats) {
+    // Convert milliseconds to human-readable format
+    function formatDuration(ms) {
+        const hours = ms / (1000 * 60 * 60);
+        const days = hours / 24;
+        
+        if (days >= 1) {
+            // Show days if >= 1 day
+            const roundedDays = Math.round(days * 10) / 10; // 1 decimal place
+            return { value: roundedDays, unit: roundedDays === 1 ? 'day' : 'days' };
+        } else {
+            // Show hours if < 1 day
+            const roundedHours = Math.round(hours);
+            return { value: roundedHours, unit: roundedHours === 1 ? 'hour' : 'hours' };
+        }
+    }
+    
+    const movingFormatted = formatDuration(timeStats.moving);
+    const stationaryFormatted = formatDuration(timeStats.stationary);
+    
+    // Time moving story element
+    const timeMovingEl = document.getElementById('stat-time-moving');
+    const timeMovingUnitEl = document.getElementById('stat-time-moving-unit');
+    if (timeMovingEl) {
+        timeMovingEl.textContent = movingFormatted.value;
+    }
+    if (timeMovingUnitEl) {
+        timeMovingUnitEl.textContent = movingFormatted.unit;
+    }
+    
+    // Time stationary story element
+    const timeStationaryEl = document.getElementById('stat-time-stationary');
+    const timeStationaryUnitEl = document.getElementById('stat-time-stationary-unit');
+    if (timeStationaryEl) {
+        timeStationaryEl.textContent = stationaryFormatted.value;
+    }
+    if (timeStationaryUnitEl) {
+        timeStationaryUnitEl.textContent = stationaryFormatted.unit;
+    }
+    
+    // Keep backward compatibility with hidden container
     const container = document.getElementById('time-distribution-stats');
-    container.innerHTML = '';
-
-    const totalHours = timeStats.total / (1000 * 60 * 60);
-    const movingHours = timeStats.moving / (1000 * 60 * 60);
-    const stationaryHours = timeStats.stationary / (1000 * 60 * 60);
-
-    const movingPct = Math.round((timeStats.moving / timeStats.total) * 100) || 0;
-    const stationaryPct = Math.round((timeStats.stationary / timeStats.total) * 100) || 0;
-
-    // Use the new animated time distribution scene
-    const timeScene = createTimeDistributionScene(movingPct, stationaryPct, movingHours, stationaryHours);
-    container.appendChild(timeScene);
+    if (container) {
+        container.innerHTML = '';
+    }
 }
 
 function renderRecordBreakers(records) {
-    const container = document.getElementById('record-breakers-stats');
-    container.innerHTML = '';
-
+    // Update Typography Story Section for Records
     const driveKm = (records.longestDrive / 1000).toFixed(1);
     const walkKm = (records.longestWalk / 1000).toFixed(1);
-
-    // Animated record breaker scenes
-    container.appendChild(createRecordBreakerScene('drive', driveKm, 'km'));
-    container.appendChild(createRecordBreakerScene('walk', walkKm, 'km'));
+    
+    // Longest drive story element
+    const longestDriveEl = document.getElementById('stat-longest-drive');
+    if (longestDriveEl) {
+        longestDriveEl.textContent = `${driveKm} km`;
+    }
+    
+    // Longest walk story element
+    const longestWalkEl = document.getElementById('stat-longest-walk');
+    if (longestWalkEl) {
+        longestWalkEl.textContent = `${walkKm} km`;
+    }
+    
+    // Keep backward compatibility with hidden container
+    const container = document.getElementById('record-breakers-stats');
+    if (container) {
+        container.innerHTML = '';
+    }
 }
 
-// Heuristic to extract city and country from address strings
-function extractLocationDetails(address, citiesSet, countriesSet) {
-    const parts = address.split(',').map(p => p.trim());
-    if (parts.length > 0) {
-        countriesSet.add(parts[parts.length - 1]); // Last format is usually country
+// Transport icons and labels mapping
+const transportConfig = {
+    'IN_PASSENGER_VEHICLE': { icon: '🚗', label: 'Driving' },
+    'IN_VEHICLE': { icon: '🚗', label: 'Driving' },
+    'IN_TAXI': { icon: '🚕', label: 'Taxi' },
+    'FLYING': { icon: '✈️', label: 'Flying' },
+    'IN_BUS': { icon: '🚌', label: 'Bus' },
+    'IN_TRAIN': { icon: '🚆', label: 'Train' },
+    'IN_SUBWAY': { icon: '🚇', label: 'Subway' },
+    'IN_TRAM': { icon: '🚊', label: 'Tram' },
+    'WALKING': { icon: '🚶', label: 'Walking' },
+    'RUNNING': { icon: '🏃', label: 'Running' },
+    'CYCLING': { icon: '🚴', label: 'Cycling' },
+    'MOTORCYCLING': { icon: '🏍️', label: 'Motorcycle' },
+    'IN_FERRY': { icon: '⛴️', label: 'Ferry' },
+    'SAILING': { icon: '⛵', label: 'Sailing' },
+    'SKIING': { icon: '⛷️', label: 'Skiing' },
+    'UNKNOWN': { icon: '📍', label: 'Other' }
+};
+
+function renderTransportBreakdown(transportStats) {
+    const grid = document.getElementById('stat-transport-grid');
+    if (!grid) return;
+    
+    grid.innerHTML = '';
+    
+    // Sort by distance (descending) and take top 8
+    const sortedTransport = Object.entries(transportStats)
+        .sort(([, a], [, b]) => b.distanceMeters - a.distanceMeters)
+        .slice(0, 8);
+    
+    if (sortedTransport.length === 0) {
+        grid.innerHTML = '<p class="col-span-full text-gray-500 dark:text-gray-400">No transport data available</p>';
+        return;
     }
-    if (parts.length > 2) {
-        citiesSet.add(parts[parts.length - 3] || parts[parts.length - 2] || parts[0]);
+    
+    sortedTransport.forEach(([type, data]) => {
+        const config = transportConfig[type] || transportConfig['UNKNOWN'];
+        const distanceKm = Math.round(data.distanceMeters / 1000);
+        const durationHours = Math.round(data.durationMs / (1000 * 60 * 60));
+        
+        const card = document.createElement('div');
+        card.className = 'transport-stat-card';
+        card.innerHTML = `
+            <div class="transport-icon">${config.icon}</div>
+            <div class="transport-value">${distanceKm.toLocaleString()} km</div>
+            <div class="transport-label">${config.label}</div>
+            <div class="transport-sublabel">${data.count} trips • ${durationHours}h</div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+function renderTopPlacesSection(visitStats) {
+    const grid = document.getElementById('stat-top-places-grid');
+    if (!grid) return;
+    
+    grid.innerHTML = '';
+    
+    // Get all places sorted by visit count (include places without names)
+    const allPlaces = Object.values(visitStats)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 6);
+    
+    if (allPlaces.length === 0) {
+        grid.innerHTML = '<p class="col-span-full text-gray-500 dark:text-gray-400">No places found</p>';
+        return;
     }
+    
+    allPlaces.forEach((place, index) => {
+        const card = document.createElement('div');
+        card.className = 'place-stat-card';
+        
+        // Use name if available, otherwise show coordinates
+        const hasName = place.name && place.name !== "Unknown Place";
+        const displayName = hasName ? place.name : formatLatLng(place.latLng);
+        const displayTitle = hasName ? place.name : place.latLng;
+        
+        card.innerHTML = `
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-400 dark:text-gray-500 text-sm flex-shrink-0">#${index + 1}</span>
+                    <span class="place-name ${!hasName ? 'text-gray-500 dark:text-gray-400 font-mono text-sm' : ''}" title="${displayTitle}">${displayName}</span>
+                </div>
+                ${place.country ? `<p class="text-xs text-gray-400 dark:text-gray-500 ml-6 mt-0.5">${place.country}</p>` : ''}
+            </div>
+            <div class="text-right flex-shrink-0">
+                <div class="place-count">${place.count}</div>
+                <div class="place-count-label">visits</div>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+// Helper to format lat/lng string for display
+function formatLatLng(latLngStr) {
+    if (!latLngStr) return 'Unknown Location';
+    // Parse and format to shorter decimal places
+    const parts = latLngStr.replace(/°/g, '').split(',');
+    if (parts.length !== 2) return latLngStr;
+    const lat = parseFloat(parts[0].trim());
+    const lng = parseFloat(parts[1].trim());
+    if (isNaN(lat) || isNaN(lng)) return latLngStr;
+    return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 }
 
 function renderStatistics(stats) {
-    const grid = document.getElementById('statistics-grid');
-    grid.innerHTML = '';
-
-    // Total Distance - with plane/travel animation
+    // Update Typography Story Sections (new approach)
     const distanceKm = Math.round(stats.totalDistanceMeters / 1000);
-    grid.appendChild(createAnimatedStatScene({
-        title: 'Total Distance',
-        value: `${distanceKm.toLocaleString()} km`,
-        sceneType: 'distance',
-        data: { distanceKm }
-    }));
-
-    // Total Visits - with pin drop animation
-    grid.appendChild(createAnimatedStatScene({
-        title: 'Places Visited',
-        value: stats.totalVisits.toLocaleString(),
-        sceneType: 'places',
-        data: { count: stats.totalVisits }
-    }));
-
-    // Cities visited - with city skyline animation
-    const cityCount = stats.cities.size;
-    grid.appendChild(createAnimatedStatScene({
-        title: 'Cities Visited',
-        value: cityCount.toLocaleString(),
-        sceneType: 'city',
-        data: { count: cityCount }
-    }));
-
-    // Countries visited - with globe animation
-    grid.appendChild(createAnimatedStatScene({
-        title: 'Countries Visited',
-        value: stats.countries.size.toLocaleString(),
-        sceneType: 'globe',
-        data: { count: stats.countries.size }
-    }));
+    const uniquePlacesCount = Object.keys(stats.visits || {}).length;
+    const countriesCount = stats.countries.size;
+    
+    // Distance story section
+    const distanceEl = document.getElementById('stat-distance');
+    if (distanceEl) {
+        distanceEl.textContent = `${distanceKm.toLocaleString()} km`;
+    }
+    
+    const distanceSubtitle = document.getElementById('stat-distance-subtitle');
+    if (distanceSubtitle) {
+        if (distanceKm > 40000) {
+            distanceSubtitle.textContent = "That's like travelling around the Earth!";
+        } else if (distanceKm > 10000) {
+            distanceSubtitle.textContent = "You've covered some serious ground.";
+        } else if (distanceKm > 1000) {
+            distanceSubtitle.textContent = "You've been on quite the journey.";
+        } else {
+            distanceSubtitle.textContent = "Every kilometer counts.";
+        }
+    }
+    
+    // Places & Countries story section
+    const placesCount = document.getElementById('stat-places-count');
+    if (placesCount) {
+        placesCount.textContent = uniquePlacesCount.toLocaleString();
+    }
+    
+    const countriesCountEl = document.getElementById('stat-countries-count');
+    if (countriesCountEl) {
+        countriesCountEl.textContent = countriesCount.toLocaleString();
+    }
+    
+    // Visits story section
+    const visitsEl = document.getElementById('stat-visits');
+    if (visitsEl) {
+        visitsEl.textContent = stats.totalVisits.toLocaleString();
+    }
+    
+    // Also keep backward compatibility with hidden grid (for any other code referencing it)
+    const grid = document.getElementById('statistics-grid');
+    if (grid) {
+        grid.innerHTML = '';
+    }
 }
 
 function createStatCard(title, value, iconName) {
@@ -1145,11 +1282,11 @@ function renderTravelSummary(stats) {
     worldPercentage.textContent = `${coverage}%`;
 
     const countryCount = stats.countries.size;
-    const cityCount = stats.cities.size;
+    const uniquePlacesCount = Object.keys(stats.visits || {}).length;
 
-    if (countryCount > 0 || cityCount > 0) {
+    if (countryCount > 0 || uniquePlacesCount > 0) {
         description.innerHTML = `
-            You've explored <strong>${countryCount} countries</strong> and <strong>${cityCount} cities</strong> this period.<br>
+            You've explored <strong>${countryCount} countries</strong> and <strong>${uniquePlacesCount} unique places</strong> this period.<br>
             That's about <strong>${coverage}%</strong> of Earth's diameter, over <strong>${Math.round(distanceKm).toLocaleString()} km</strong>.
         `;
     } else {
@@ -1208,7 +1345,6 @@ function renderVisitTrends(visitStats) {
         card.innerHTML = `
             <div>
                 <p class="font-semibold text-gray-900 truncate w-48" title="${place.name}">${place.name}</p>
-                <p class="text-xs text-gray-500 truncate w-48 font-medium">${place.address || ''}</p>
             </div>
             <div class="flex flex-col items-end">
                 <span class="text-xl font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md min-w-[30px] text-center">${place.count}</span>
@@ -1219,75 +1355,32 @@ function renderVisitTrends(visitStats) {
 }
 
 function renderHighlights(visitStats, segments) {
-    // 1. Places Highlights (Top visited)
+    // Note: In the new typography-first layout, places-grid and cities-grid are hidden
+    // divs for backward compatibility. We just clear them; no section visibility toggling.
+    
+    // 1. Places Highlights (Top visited) - now handled by typography sections
     const placesGrid = document.getElementById('places-grid');
-    placesGrid.innerHTML = '';
-
-    const topPlaces = Object.values(visitStats)
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 4);
-
-    // If no places have names (heuristic: all names are "Unknown Place"), hide the section
-    const hasNames = topPlaces.some(p => p.name !== "Unknown Place");
-
-    if (hasNames) {
-        topPlaces.forEach(place => {
-            const card = document.createElement('div');
-            card.className = 'glass rounded-xl p-5 shadow-sm hover:shadow-lg transition-all transform hover:-translate-y-1';
-            card.innerHTML = `
-                 <div class="w-full h-32 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg mb-4 flex items-center justify-center text-indigo-300">
-                    <span class="material-icons-round text-5xl drop-shadow-sm">place</span>
-                </div>
-                <h3 class="font-bold text-gray-900 mb-1 truncate text-lg" title="${place.name}">${place.name}</h3>
-                <div class="flex justify-between items-center mt-3">
-                    <span class="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-md">${place.count} visits</span>
-                    <p class="text-xs text-gray-400 font-mono">${place.latLng ? place.latLng : ''}</p>
-                </div>
-            `;
-            placesGrid.appendChild(card);
-        });
-        placesGrid.closest('section').style.display = 'block';
-    } else {
-        placesGrid.closest('section').style.display = 'none';
+    if (placesGrid) {
+        placesGrid.innerHTML = '';
+        // Only try to toggle section visibility if it exists
+        const placesSection = placesGrid.closest('section');
+        if (placesSection) {
+            const topPlaces = Object.values(visitStats)
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 4);
+            const hasNames = topPlaces.some(p => p.name !== "Unknown Place");
+            placesSection.style.display = hasNames ? 'block' : 'none';
+        }
     }
 
-    // 2. Cities Highlights
+    // 2. Cities Highlights (disabled – city data removed)
     const citiesGrid = document.getElementById('cities-grid');
-    citiesGrid.innerHTML = '';
-
-    const cityCounts = {};
-    Object.values(visitStats).forEach(place => {
-        if (place.address) {
-            const parts = place.address.split(',').map(p => p.trim());
-            if (parts.length >= 3) {
-                const city = parts[parts.length - 3] || parts[parts.length - 2];
-                cityCounts[city] = (cityCounts[city] || 0) + place.count;
-            }
+    if (citiesGrid) {
+        citiesGrid.innerHTML = '';
+        const citiesSection = citiesGrid.closest('section');
+        if (citiesSection) {
+            citiesSection.style.display = 'none';
         }
-    });
-
-    const topCities = Object.entries(cityCounts)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 3);
-
-    if (topCities.length > 0) {
-        topCities.forEach(([city, count]) => {
-            const card = document.createElement('div');
-            card.className = 'glass rounded-xl p-5 shadow-sm flex items-center gap-4 hover:shadow-lg transition-all';
-            card.innerHTML = `
-                <div class="p-3 bg-gradient-to-br from-purple-100 to-pink-100 text-purple-600 rounded-xl shadow-inner">
-                    <span class="material-icons-round text-2xl">location_city</span>
-                </div>
-                <div>
-                    <h3 class="font-bold text-gray-900 text-lg leading-tight">${city}</h3>
-                    <p class="text-sm text-gray-500 font-medium mt-1">${count} places visited</p>
-                </div>
-            `;
-            citiesGrid.appendChild(card);
-        });
-        citiesGrid.closest('section').style.display = 'block';
-    } else {
-        citiesGrid.closest('section').style.display = 'none';
     }
 }
 
@@ -1304,8 +1397,8 @@ function renderAllTimeStats(stats) {
     statsData.forEach(stat => {
         const div = document.createElement('div');
         div.innerHTML = `
-            <p class="text-3xl font-bold text-gray-900 mb-1">${stat.value}</p>
-            <p class="text-sm text-gray-600 uppercase tracking-wide">${stat.label}</p>
+            <p class="text-4xl md:text-5xl font-black text-white mb-2">${stat.value}</p>
+            <p class="text-sm text-gray-400 uppercase tracking-widest">${stat.label}</p>
         `;
         container.appendChild(div);
     });
@@ -1346,15 +1439,18 @@ function renderMarkers() {
     // Fit map to bounds
     map.fitBounds(bounds, { padding: [50, 50] });
 
-    // Add markers as individual points
+    // Add markers as individual points with aesthetic styling
     filteredLocations.forEach(loc => {
         const popupContent = buildPopupContent(loc);
-        // Create a custom icon for a simple red point
+        // Create a custom aesthetic marker
         const pointIcon = L.divIcon({
             className: 'custom-point-marker',
-            html: '<div style="width: 8px; height: 8px; background-color: #ef4444; border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
-            iconSize: [8, 8],
-            iconAnchor: [4, 4]
+            html: `<div class="map-marker-dot">
+                <div class="map-marker-inner"></div>
+                <div class="map-marker-pulse"></div>
+            </div>`,
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
         });
         const marker = L.marker([loc.lat, loc.lng], { icon: pointIcon })
             .bindPopup(popupContent);
@@ -1372,9 +1468,7 @@ function buildPopupContent(location) {
         content += `<strong>${location.name}</strong><br>`;
     }
 
-    if (location.address) {
-        content += `<span class="text-xs text-gray-600">${location.address}</span><br>`;
-    } else {
+    if (!location.name) {
         content += `<strong>Unknown Location</strong><br>`;
     }
 
@@ -1628,7 +1722,7 @@ function initGlobeScrollAnimation() {
 function initScrollAnimations() {
     const observerOptions = {
         threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px' // Trigger slightly before element is fully in view
+        rootMargin: '0px 0px -50px 0px' // Trigger earlier for smoother scroll storytelling
     };
 
     const observer = new IntersectionObserver((entries) => {
@@ -1652,10 +1746,23 @@ function initScrollAnimations() {
     // We use a timeout to ensure DOM is fully updated
     setTimeout(() => {
         const triggers = document.querySelectorAll('.scroll-trigger');
-        triggers.forEach(trigger => {
+        
+        // Immediately show the first few sections that are likely in viewport
+        triggers.forEach((trigger, index) => {
             // Only observe if not already animated
             if (!trigger.classList.contains('animate-scene-emerge')) {
-                observer.observe(trigger);
+                // Add staggered animation delay for story sections
+                if (trigger.classList.contains('story-section')) {
+                    trigger.style.transitionDelay = `${index * 50}ms`;
+                }
+                
+                // Immediately trigger first 3 sections to ensure something is visible
+                if (index < 3) {
+                    trigger.classList.add('animate-scene-emerge');
+                    trigger.classList.remove('opacity-0');
+                } else {
+                    observer.observe(trigger);
+                }
             }
         });
     }, 100);

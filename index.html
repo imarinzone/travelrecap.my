@@ -783,85 +783,114 @@
         body.dark .bg-gray-100 { background-color: #334155; }
         body.dark .bg-gray-200 { background-color: #475569; }
         
-        /* Timeline year point styles */
-        .timeline-year-point {
-            position: relative;
-            cursor: pointer;
-            transition: all 0.2s ease;
+        /* Modern Timeline Selector Styles */
+        .timeline-modern-wrapper {
+            display: flex;
+            justify-content: center;
+            width: 100%;
         }
         
-        .timeline-year-point::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 12px;
-            height: 12px;
-            background: #cbd5e1;
-            border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: all 0.2s ease;
-        }
-        
-        body.dark .timeline-year-point::before {
-            background: #475569;
-            border-color: #1e293b;
-        }
-        
-        .timeline-year-point:hover::before,
-        .timeline-year-point.active::before {
-            background: #3b82f6;
-            transform: translate(-50%, -50%) scale(1.3);
-        }
-        
-        .timeline-year-point.active::before {
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
-        }
-        
-        .timeline-year-label {
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            margin-top: 8px;
-            font-size: 11px;
-            font-weight: 600;
-            color: #64748b;
-            white-space: nowrap;
-            transition: color 0.2s ease;
-        }
-        
-        body.dark .timeline-year-label {
-            color: #94a3b8;
-        }
-        
-        .timeline-year-point:hover .timeline-year-label,
-        .timeline-year-point.active .timeline-year-label {
-            color: #3b82f6;
-        }
-        
-        .timeline-all-years {
-            font-size: 10px;
-            padding: 2px 8px;
-            background: #e2e8f0;
+        .timeline-modern-container {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px;
+            background: rgba(241, 245, 249, 0.8);
             border-radius: 9999px;
-            color: #475569;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(226, 232, 240, 0.5);
+            overflow-x: auto;
+            max-width: 100%;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
         
-        body.dark .timeline-all-years {
-            background: #334155;
+        .timeline-modern-container::-webkit-scrollbar {
+            display: none;
+        }
+        
+        body.dark .timeline-modern-container {
+            background: rgba(30, 41, 59, 0.8);
+            border-color: rgba(51, 65, 85, 0.5);
+        }
+        
+        /* Timeline year button styles (modern pill) */
+        .timeline-year-btn {
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #64748b;
+            background: transparent;
+            border: none;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        
+        body.dark .timeline-year-btn {
             color: #94a3b8;
         }
         
-        .timeline-all-years:hover,
-        .timeline-all-years.active {
-            background: #3b82f6;
+        .timeline-year-btn:hover {
+            color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        body.dark .timeline-year-btn:hover {
+            color: #60a5fa;
+            background: rgba(59, 130, 246, 0.15);
+        }
+        
+        .timeline-year-btn.active {
             color: white;
+            background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+        }
+        
+        body.dark .timeline-year-btn.active {
+            background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+            box-shadow: 0 2px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        /* Legacy classes for backward compatibility - style same as modern buttons */
+        .timeline-year-point,
+        .timeline-all-years {
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #64748b;
+            background: transparent;
+            border: none;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        
+        body.dark .timeline-year-point,
+        body.dark .timeline-all-years {
+            color: #94a3b8;
+        }
+        
+        .timeline-year-point:hover,
+        .timeline-all-years:hover {
+            color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .timeline-year-point.active,
+        .timeline-all-years.active {
+            color: white;
+            background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+        }
+        
+        /* Remove old label styling */
+        .timeline-year-label {
+            display: none;
         }
 
         /* Hide scrollbar for clean horizontal scroll */
@@ -877,6 +906,93 @@
         /* Map specific overrides */
         #map {
             z-index: 10;
+        }
+        
+        /* ===== AESTHETIC MAP MARKERS ===== */
+        .custom-point-marker {
+            background: transparent !important;
+            border: none !important;
+        }
+        
+        .map-marker-dot {
+            position: relative;
+            width: 16px;
+            height: 16px;
+        }
+        
+        .map-marker-inner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 
+                0 2px 6px rgba(99, 102, 241, 0.5),
+                0 1px 2px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .map-marker-dot:hover .map-marker-inner {
+            transform: translate(-50%, -50%) scale(1.3);
+            box-shadow: 
+                0 4px 12px rgba(99, 102, 241, 0.6),
+                0 2px 4px rgba(0, 0, 0, 0.15);
+        }
+        
+        .map-marker-pulse {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: rgba(99, 102, 241, 0.3);
+            border-radius: 50%;
+            animation: marker-pulse 2s ease-out infinite;
+            pointer-events: none;
+        }
+        
+        @keyframes marker-pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.6;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(3);
+                opacity: 0;
+            }
+        }
+        
+        /* Dark mode markers */
+        body.dark .map-marker-inner {
+            background: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #c084fc 100%);
+            border-color: #1e293b;
+            box-shadow: 
+                0 2px 8px rgba(129, 140, 248, 0.5),
+                0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        
+        body.dark .map-marker-pulse {
+            background: rgba(129, 140, 248, 0.3);
+        }
+        
+        /* Leaflet popup styling */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        body.dark .leaflet-popup-content-wrapper {
+            background: #1e293b;
+            color: #e2e8f0;
+        }
+        
+        body.dark .leaflet-popup-tip {
+            background: #1e293b;
         }
 
         /* ===== ANIMATED STAT SCENE KEYFRAMES ===== */
@@ -1225,6 +1341,171 @@
             height: 100%;
         }
 
+        /* ===== BACKGROUND INFOGRAPHIC ===== */
+        
+        #bg-infographic {
+            transition: opacity 0.5s ease;
+        }
+        
+        /* Hide bg when map/globe is in fullscreen or focused */
+        #map-container-wrapper.fullscreen ~ #bg-infographic,
+        body.map-focused #bg-infographic {
+            opacity: 0 !important;
+        }
+
+        /* ===== TYPOGRAPHY-FIRST STORYTELLING STYLES ===== */
+        
+        .story-section {
+            position: relative;
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+        
+        .story-headline {
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+        }
+        
+        /* Enhanced scroll-triggered fade animation for text */
+        @keyframes text-fade-up {
+            0% {
+                opacity: 0;
+                transform: translateY(40px) scale(0.96);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .story-section.animate-scene-emerge {
+            animation: text-fade-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        
+        /* Gradient text for emphasis */
+        .gradient-text {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        body.dark .gradient-text {
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Transport stat card */
+        .transport-stat-card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .transport-stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+        }
+        
+        body.dark .transport-stat-card {
+            background: rgba(30, 41, 59, 0.6);
+            border-color: rgba(51, 65, 85, 0.3);
+        }
+        
+        .transport-stat-card .transport-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .transport-stat-card .transport-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #1e293b;
+        }
+        
+        body.dark .transport-stat-card .transport-value {
+            color: #f1f5f9;
+        }
+        
+        .transport-stat-card .transport-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.25rem;
+        }
+        
+        body.dark .transport-stat-card .transport-label {
+            color: #94a3b8;
+        }
+        
+        .transport-stat-card .transport-sublabel {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+        }
+        
+        /* Place stat card */
+        .place-stat-card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 1rem;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            text-align: left;
+            transition: all 0.3s ease;
+        }
+        
+        .place-stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        body.dark .place-stat-card {
+            background: rgba(30, 41, 59, 0.6);
+            border-color: rgba(51, 65, 85, 0.3);
+        }
+        
+        .place-stat-card .place-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1e293b;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        body.dark .place-stat-card .place-name {
+            color: #f1f5f9;
+        }
+        
+        .place-stat-card .place-count {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #6366f1;
+            min-width: 50px;
+            text-align: right;
+        }
+        
+        body.dark .place-stat-card .place-count {
+            color: #818cf8;
+        }
+        
+        .place-stat-card .place-count-label {
+            font-size: 0.65rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+        }
+
         /* ===== REDUCED MOTION SUPPORT ===== */
         @media (prefers-reduced-motion: reduce) {
 
@@ -1242,7 +1523,8 @@
             .animate-orbital-float,
             .animate-pin-drop,
             .animate-scene-emerge,
-            .animate-road-dash {
+            .animate-road-dash,
+            .story-section.animate-scene-emerge {
                 animation: none !important;
                 transform: none !important;
                 opacity: 1 !important;
@@ -1253,25 +1535,65 @@
 
 <body class="text-gray-800 antialiased selection:bg-blue-100 selection:text-blue-900 transition-colors duration-300" id="app-body">
 
+    <!-- ===== VECTOR BACKGROUND INFOGRAPHIC ===== -->
+    <div id="bg-infographic" class="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-[0.04] dark:opacity-[0.06]">
+        <!-- Globe lines / meridians -->
+        <svg class="absolute w-[800px] h-[800px] -top-40 -right-40 text-blue-500 dark:text-blue-400" viewBox="0 0 400 400" fill="none" stroke="currentColor" stroke-width="0.5">
+            <circle cx="200" cy="200" r="180" />
+            <circle cx="200" cy="200" r="140" />
+            <circle cx="200" cy="200" r="100" />
+            <ellipse cx="200" cy="200" rx="180" ry="60" />
+            <ellipse cx="200" cy="200" rx="180" ry="120" />
+            <line x1="200" y1="20" x2="200" y2="380" />
+            <line x1="20" y1="200" x2="380" y2="200" />
+            <path d="M 80 80 Q 200 150 320 80" />
+            <path d="M 80 320 Q 200 250 320 320" />
+        </svg>
+        
+        <!-- Abstract path / journey lines -->
+        <svg class="absolute w-[600px] h-[600px] top-1/3 -left-32 text-indigo-400 dark:text-indigo-500" viewBox="0 0 300 300" fill="none" stroke="currentColor" stroke-width="0.5">
+            <path d="M 20 150 Q 80 50 150 150 T 280 150" />
+            <path d="M 20 180 Q 100 100 180 180 T 280 180" />
+            <circle cx="50" cy="150" r="8" fill="currentColor" opacity="0.3" />
+            <circle cx="150" cy="150" r="5" fill="currentColor" opacity="0.3" />
+            <circle cx="250" cy="150" r="10" fill="currentColor" opacity="0.3" />
+        </svg>
+        
+        <!-- Dotted trail pattern -->
+        <svg class="absolute w-[500px] h-[500px] bottom-20 right-10 text-purple-400 dark:text-purple-500" viewBox="0 0 250 250" fill="currentColor">
+            <circle cx="30" cy="50" r="3" opacity="0.4" />
+            <circle cx="60" cy="80" r="2" opacity="0.3" />
+            <circle cx="100" cy="70" r="4" opacity="0.5" />
+            <circle cx="140" cy="100" r="2" opacity="0.3" />
+            <circle cx="180" cy="90" r="3" opacity="0.4" />
+            <circle cx="210" cy="120" r="2" opacity="0.3" />
+            <circle cx="50" cy="150" r="2" opacity="0.3" />
+            <circle cx="90" cy="170" r="3" opacity="0.4" />
+            <circle cx="130" cy="160" r="2" opacity="0.3" />
+            <circle cx="170" cy="190" r="4" opacity="0.5" />
+            <circle cx="200" cy="180" r="2" opacity="0.3" />
+            <circle cx="220" cy="210" r="3" opacity="0.4" />
+        </svg>
+        
+        <!-- Compass rose hint -->
+        <svg class="absolute w-[300px] h-[300px] top-2/3 left-1/4 text-gray-400 dark:text-gray-500" viewBox="0 0 150 150" fill="none" stroke="currentColor" stroke-width="0.5">
+            <circle cx="75" cy="75" r="50" />
+            <line x1="75" y1="20" x2="75" y2="130" />
+            <line x1="20" y1="75" x2="130" y2="75" />
+            <polygon points="75,35 80,55 70,55" fill="currentColor" opacity="0.5" />
+        </svg>
+    </div>
+
     <!-- Top Control Bar -->
     <div id="top-control-bar" class="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200/50 dark:border-gray-700/50 transition-colors duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
             <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
                 
-                <!-- Timeline Year Selector -->
-                <div id="timeline-selector-container" class="hidden flex-1 max-w-2xl">
-                    <div class="relative">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="material-icons-round text-blue-600 dark:text-blue-400 text-sm">calendar_today</span>
-                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Timeline</span>
-                        </div>
-                        <div class="relative flex items-center">
-                            <!-- Timeline line -->
-                            <div class="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-blue-200 via-blue-400 to-indigo-400 dark:from-blue-800 dark:via-blue-600 dark:to-indigo-600 rounded-full"></div>
-                            <!-- Year points container -->
-                            <div id="timeline-years" class="relative flex items-center justify-between w-full py-2">
-                                <!-- Year points will be dynamically added here -->
-                            </div>
+                <!-- Timeline Year Selector (Modern Centered) -->
+                <div id="timeline-selector-container" class="hidden flex-1 justify-center">
+                    <div class="timeline-modern-wrapper">
+                        <div id="timeline-years" class="timeline-modern-container">
+                            <!-- Year buttons will be dynamically added here -->
                         </div>
                     </div>
                 </div>
@@ -1346,183 +1668,150 @@
         </section>
 
         <!-- Main Dashboard (Hidden by default) -->
-        <div id="dashboard-content" class="hidden space-y-8 pb-12">
+        <div id="dashboard-content" class="hidden pb-12">
 
-            <!-- Map Section -->
-            <section class="glass dark:glass-dark rounded-3xl shadow-lg border border-white/50 dark:border-gray-700/50 overflow-hidden relative group transition-colors duration-300">
-                <div
-                    class="p-6 border-b border-gray-100/50 dark:border-gray-700/50 flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <span class="material-icons-round text-blue-600 dark:text-blue-400">map</span> Interactive Map
+            <!-- Map Section (Compact) -->
+            <section class="glass dark:glass-dark rounded-3xl shadow-lg border border-white/50 dark:border-gray-700/50 overflow-hidden relative group transition-colors duration-300 mb-24">
+                <div class="p-4 border-b border-gray-100/50 dark:border-gray-700/50 flex justify-between items-center">
+                    <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <span class="material-icons-round text-blue-500 dark:text-blue-400 text-base">map</span> Your Journey Map
                     </h2>
-
-                    <div class="flex flex-wrap items-center gap-3 bg-gray-100/50 dark:bg-gray-800/50 p-1.5 rounded-xl">
-                        <button id="map-fullscreen" class="p-2 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                            title="Toggle Fullscreen">
-                            <span id="fullscreen-icon" class="material-icons-round">fullscreen</span>
+                    <div class="flex items-center gap-2">
+                        <button id="map-fullscreen" class="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title="Fullscreen">
+                            <span id="fullscreen-icon" class="material-icons-round text-lg">fullscreen</span>
                         </button>
-                        <div class="h-4 w-[1px] bg-gray-300 dark:bg-gray-600"></div>
-                        <button onclick="shareCard('map-container-wrapper')"
-                            class="p-2 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title="Share Map">
-                            <span class="material-icons-round">ios_share</span>
+                        <button onclick="shareCard('map-container-wrapper')" class="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors" title="Share">
+                            <span class="material-icons-round text-lg">ios_share</span>
                         </button>
                     </div>
                 </div>
-
-                <div id="map-container-wrapper" class="relative bg-gray-100 dark:bg-gray-800 w-full h-[600px] transition-colors duration-300">
+                <div id="map-container-wrapper" class="relative bg-gray-100 dark:bg-gray-800 w-full h-[500px] transition-colors duration-300">
                     <div id="map" class="w-full h-full"></div>
                 </div>
             </section>
 
-            <!-- Key Metrics Grid - Animated Stats -->
-            <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="statistics-grid">
-                <!-- Animated stat scenes managed by script.js -->
+            <!-- ========== TYPOGRAPHY-FIRST STORYTELLING SECTIONS ========== -->
+
+            <!-- Distance Story -->
+            <section class="story-section min-h-[50vh] flex items-center justify-center py-16 opacity-0 scroll-trigger" id="story-distance">
+                <div class="text-center max-w-4xl mx-auto px-4">
+                    <p class="text-lg text-gray-500 dark:text-gray-400 mb-4 uppercase tracking-widest font-medium">Total Distance</p>
+                    <h2 class="story-headline text-6xl md:text-8xl font-black text-gray-900 dark:text-white leading-none mb-6" id="stat-distance">
+                        0 km
+                    </h2>
+                    <p class="text-xl md:text-2xl text-gray-600 dark:text-gray-300 font-light" id="stat-distance-subtitle">
+                        You've been on quite the journey.
+                    </p>
+                </div>
             </section>
 
-            <!-- Travel Summary (Globe) moved to bottom -->
-
-            <!-- Detailed Stats Grid -->
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
-
-                <!-- Travel Modes - Animated Scenes -->
-                <section
-                    class="rounded-3xl p-6 shadow-lg bg-gradient-to-br from-white/60 to-white/40 dark:from-gray-800/60 dark:to-gray-900/40 backdrop-blur-sm border border-white/30 dark:border-gray-700/30 xl:col-span-1 flex flex-col transition-colors duration-300"
-                    id="travel-modes-card">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">How You Move</h3>
-                        <button onclick="shareCard('travel-modes-card')"
-                            class="text-gray-400 hover:text-blue-600 transition-colors" title="Share">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
-                                </path>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto pr-2 custom-scrollbar flex-1"
-                        id="travel-trends-grid">
-                        <!-- Animated transport scene cards -->
-                    </div>
-                </section>
-
-                <!-- Visit Trends -->
-                <section
-                    class="rounded-3xl p-6 shadow-lg bg-gradient-to-br from-white/60 to-white/40 dark:from-gray-800/60 dark:to-gray-900/40 backdrop-blur-sm border border-white/30 dark:border-gray-700/30 xl:col-span-1 flex flex-col transition-colors duration-300"
-                    id="visit-trends-card">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-xl font-bold text-gray-900 dark:text-white">Top Spots</h3>
-                        <button onclick="shareCard('visit-trends-card')"
-                            class="text-gray-400 hover:text-blue-600 transition-colors" title="Share">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
-                                </path>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1" id="visit-trends-grid">
-                        <!-- Content -->
-                    </div>
-                </section>
-
-                <!-- Stats Column - Animated Scenes -->
-                <div class="flex flex-col gap-6 xl:col-span-1">
-
-                    <!-- Time - Animated Distribution -->
-                    <section
-                        class="rounded-3xl p-5 shadow-lg bg-gradient-to-br from-white/60 to-white/40 dark:from-gray-800/60 dark:to-gray-900/40 backdrop-blur-sm border border-white/30 dark:border-gray-700/30 transition-colors duration-300"
-                        id="time-card">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Time Spent</h3>
-                            <button onclick="shareCard('time-card')"
-                                class="text-gray-400 hover:text-blue-600 transition-colors" title="Share">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
-                                    </path>
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="time-distribution-stats"></div>
-                    </section>
-
-                    <!-- Records - Animated Scenes -->
-                    <section
-                        class="rounded-3xl p-5 shadow-lg bg-gradient-to-br from-white/60 to-white/40 dark:from-gray-800/60 dark:to-gray-900/40 backdrop-blur-sm border border-white/30 dark:border-gray-700/30 transition-colors duration-300"
-                        id="records-card">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Personal Records</h3>
-                            <button onclick="shareCard('records-card')"
-                                class="text-gray-400 hover:text-blue-600 transition-colors" title="Share">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
-                                    </path>
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="record-breakers-stats" class="space-y-3"></div>
-                    </section>
-
+            <!-- Places & Countries Story -->
+            <section class="story-section min-h-[50vh] flex items-center justify-center py-16 opacity-0 scroll-trigger" id="story-places">
+                <div class="text-center max-w-4xl mx-auto px-4">
+                    <p class="text-lg text-gray-500 dark:text-gray-400 mb-4 uppercase tracking-widest font-medium">Exploration</p>
+                    <h2 class="story-headline text-5xl md:text-7xl font-black text-gray-900 dark:text-white leading-tight mb-6" id="stat-places">
+                        <span id="stat-places-count">0</span> unique places
+                    </h2>
+                    <p class="text-xl md:text-2xl text-gray-600 dark:text-gray-300 font-light" id="stat-countries-text">
+                        across <span class="font-bold text-blue-600 dark:text-blue-400" id="stat-countries-count">0</span> countries
+                    </p>
                 </div>
-
-            </div>
-
-            <!-- Eco Impact - Animated Scenes -->
-            <section
-                class="rounded-3xl p-8 shadow-lg bg-gradient-to-br from-green-50/80 to-emerald-50/60 dark:from-green-900/30 dark:to-emerald-900/20 backdrop-blur-sm border border-green-100/50 dark:border-green-800/30 transition-colors duration-300"
-                id="eco-card">
-                <div class="flex justify-between items-center mb-8">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                            <span class="material-icons-round text-green-600 dark:text-green-400">eco</span> Environmental Impact
-                        </h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Estimated footprint based on travel modes</p>
-                    </div>
-                    <button onclick="shareCard('eco-card')"
-                        class="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-2 bg-white dark:bg-gray-700 rounded-full shadow-sm"
-                        title="Share">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z">
-                            </path>
-                        </svg>
-                    </button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="eco-impact-grid"></div>
             </section>
 
-            <!-- Cities & Places -->
-            <div class="space-y-12">
-                <!-- Cities -->
-                <section>
-                    <div class="flex items-center gap-4 mb-6 px-2">
-                        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Top Cities</h2>
-                        <div class="h-px bg-gray-300 dark:bg-gray-600 flex-1"></div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4" id="cities-grid"></div>
-                </section>
+            <!-- Total Visits Story -->
+            <section class="story-section min-h-[40vh] flex items-center justify-center py-16 opacity-0 scroll-trigger" id="story-visits">
+                <div class="text-center max-w-4xl mx-auto px-4">
+                    <p class="text-lg text-gray-500 dark:text-gray-400 mb-4 uppercase tracking-widest font-medium">Check-ins</p>
+                    <h2 class="story-headline text-6xl md:text-8xl font-black text-gray-900 dark:text-white leading-none mb-6" id="stat-visits">
+                        0
+                    </h2>
+                    <p class="text-xl md:text-2xl text-gray-600 dark:text-gray-300 font-light">
+                        total visits recorded
+                    </p>
+                </div>
+            </section>
 
-                <!-- Places -->
-                <section>
-                    <div class="flex items-center gap-4 mb-6 px-2">
-                        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Memorable Places</h2>
-                        <div class="h-px bg-gray-300 dark:bg-gray-600 flex-1"></div>
+            <!-- Time Distribution Story -->
+            <section class="story-section min-h-[50vh] flex items-center justify-center py-16 opacity-0 scroll-trigger" id="story-time">
+                <div class="text-center max-w-4xl mx-auto px-4">
+                    <p class="text-lg text-gray-500 dark:text-gray-400 mb-4 uppercase tracking-widest font-medium">Time Spent</p>
+                    <div class="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
+                        <div class="text-center">
+                            <h2 class="story-headline text-5xl md:text-7xl font-black text-emerald-600 dark:text-emerald-400 leading-none" id="stat-time-moving">
+                                0
+                            </h2>
+                            <p class="text-lg text-emerald-600/70 dark:text-emerald-400/70 font-medium" id="stat-time-moving-unit">days</p>
+                            <p class="text-base text-gray-500 dark:text-gray-400 mt-1">on the move</p>
+                        </div>
+                        <div class="text-gray-300 dark:text-gray-600 text-4xl font-extralight hidden md:block">|</div>
+                        <div class="text-center">
+                            <h2 class="story-headline text-5xl md:text-7xl font-black text-indigo-600 dark:text-indigo-400 leading-none" id="stat-time-stationary">
+                                0
+                            </h2>
+                            <p class="text-lg text-indigo-600/70 dark:text-indigo-400/70 font-medium" id="stat-time-stationary-unit">days</p>
+                            <p class="text-base text-gray-500 dark:text-gray-400 mt-1">at places</p>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="places-grid"></div>
-                </section>
-            </div>
+                </div>
+            </section>
 
-            <!-- Travel Summary (Globe) -->
-            <section class="glass rounded-3xl p-8 shadow-lg border border-white/50 dark:border-gray-700/50 relative overflow-hidden transition-colors duration-300"
+            <!-- How You Moved (Transport Breakdown) Story -->
+            <section class="story-section min-h-[60vh] flex items-center justify-center py-16 opacity-0 scroll-trigger" id="story-transport">
+                <div class="text-center max-w-5xl mx-auto px-4">
+                    <p class="text-lg text-gray-500 dark:text-gray-400 mb-8 uppercase tracking-widest font-medium">How You Moved</p>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="stat-transport-grid">
+                        <!-- Transport items will be dynamically added here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Top Places Story -->
+            <section class="story-section min-h-[60vh] flex items-center justify-center py-16 opacity-0 scroll-trigger" id="story-top-places">
+                <div class="text-center max-w-5xl mx-auto px-4">
+                    <p class="text-lg text-gray-500 dark:text-gray-400 mb-8 uppercase tracking-widest font-medium">Your Favorite Spots</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="stat-top-places-grid">
+                        <!-- Top places will be dynamically added here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Records Story -->
+            <section class="story-section min-h-[50vh] flex items-center justify-center py-16 opacity-0 scroll-trigger" id="story-records">
+                <div class="text-center max-w-4xl mx-auto px-4">
+                    <p class="text-lg text-gray-500 dark:text-gray-400 mb-8 uppercase tracking-widest font-medium">Personal Records</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                        <div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Longest Drive</p>
+                            <h3 class="text-4xl md:text-5xl font-black text-gray-900 dark:text-white" id="stat-longest-drive">0 km</h3>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Longest Walk</p>
+                            <h3 class="text-4xl md:text-5xl font-black text-gray-900 dark:text-white" id="stat-longest-walk">0 km</h3>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Eco Impact Story -->
+            <section class="story-section min-h-[50vh] flex items-center justify-center py-16 opacity-0 scroll-trigger" id="story-eco">
+                <div class="text-center max-w-4xl mx-auto px-4">
+                    <p class="text-lg text-green-600 dark:text-green-400 mb-4 uppercase tracking-widest font-medium">Environmental Impact</p>
+                    <h2 class="story-headline text-5xl md:text-7xl font-black text-gray-900 dark:text-white leading-tight mb-6" id="stat-eco-co2">
+                        0 kg CO₂
+                    </h2>
+                    <p class="text-xl md:text-2xl text-gray-600 dark:text-gray-300 font-light" id="stat-eco-trees">
+                        You'd need <span class="font-bold text-green-600 dark:text-green-400" id="stat-trees-count">0</span> trees to offset this
+                    </p>
+                </div>
+            </section>
+
+            <!-- Travel Summary (Globe) - kept intact -->
+            <section class="glass rounded-3xl p-8 shadow-lg border border-white/50 dark:border-gray-700/50 relative overflow-hidden transition-colors duration-300 my-24 opacity-0 scroll-trigger"
                 id="travel-summary-card">
                 <div class="relative z-10 flex flex-col md:flex-row items-center gap-12">
                     <div class="relative group cursor-pointer w-48 h-48 flex items-center justify-center rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-500/20 dark:to-purple-500/20"
                         onclick="shareCard('travel-summary-card')">
-                        <div
-                            class="absolute -inset-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full opacity-20 blur-xl group-hover:opacity-30 transition-opacity">
-                        </div>
-                        <div class="relative z-10 flex flex-col items-center justify-center pointer-events-none">
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
                             <span class="text-4xl font-black text-gray-900 dark:text-white drop-shadow-sm"
                                 id="world-percentage">--%</span>
                             <span class="text-xs font-bold text-gray-600 dark:text-gray-300 tracking-wider uppercase">World Covered</span>
@@ -1530,8 +1819,8 @@
                     </div>
 
                     <div class="flex-1 text-center md:text-left space-y-4">
-                        <h3 class="text-2xl font-bold text-gray-800 dark:text-white">Your Global Footprint</h3>
-                        <p class="text-lg text-gray-600 dark:text-gray-300 leading-relaxed" id="travel-description">
+                        <h3 class="text-3xl font-bold text-gray-800 dark:text-white">Your Global Footprint</h3>
+                        <p class="text-xl text-gray-600 dark:text-gray-300 leading-relaxed" id="travel-description">
                             Analysis pending...
                         </p>
                         <button onclick="shareCard('travel-summary-card')"
@@ -1542,22 +1831,32 @@
                 </div>
             </section>
 
-            <!-- All Time Stats Footer -->
-            <section class="mt-16 bg-gray-900 rounded-3xl p-10 text-white shadow-2xl relative overflow-hidden"
+            <!-- All Time Stats Footer (Typography-enhanced) -->
+            <section class="mt-16 bg-gray-900 rounded-3xl p-12 text-white shadow-2xl relative overflow-hidden opacity-0 scroll-trigger"
                 id="all-time-card">
-                <div class="relative z-10">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10">
-                        <h2 class="text-3xl font-bold">Lifetime Stats</h2>
-                        <button onclick="shareCard('all-time-card')"
-                            class="mt-4 md:mt-0 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg backdrop-blur-sm transition-colors text-sm font-medium flex items-center gap-2">
-                            <span>Share Lifetime Stats</span>
-                        </button>
+                <div class="relative z-10 text-center">
+                    <p class="text-sm text-gray-400 uppercase tracking-widest mb-4">All-Time</p>
+                    <h2 class="text-4xl md:text-5xl font-bold mb-12">Lifetime Stats</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 md:gap-16" id="all-time-stats">
+                        <!-- Content populated by JS -->
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-12" id="all-time-stats">
-                        <!-- Content -->
-                    </div>
+                    <button onclick="shareCard('all-time-card')"
+                        class="mt-12 px-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl backdrop-blur-sm transition-colors text-sm font-medium inline-flex items-center gap-2">
+                        <span class="material-icons-round text-sm">ios_share</span>
+                        <span>Share Lifetime Stats</span>
+                    </button>
                 </div>
             </section>
+
+            <!-- Hidden containers for backward compatibility (JS still references these) -->
+            <div id="statistics-grid" class="hidden"></div>
+            <div id="travel-trends-grid" class="hidden"></div>
+            <div id="visit-trends-grid" class="hidden"></div>
+            <div id="time-distribution-stats" class="hidden"></div>
+            <div id="record-breakers-stats" class="hidden"></div>
+            <div id="eco-impact-grid" class="hidden"></div>
+            <div id="cities-grid" class="hidden"></div>
+            <div id="places-grid" class="hidden"></div>
 
         </div>
 
@@ -1565,7 +1864,7 @@
             <button id="restart-button" onclick="window.location.reload()"
                 class="hidden inline-flex items-center gap-2 px-4 py-2 bg-white/60 dark:bg-gray-700/60 text-gray-800 dark:text-gray-200 rounded-xl font-medium hover:bg-white dark:hover:bg-gray-700 shadow-sm border border-white/70 dark:border-gray-600 transition-colors">
                 <span class="material-icons-round text-sm">restart_alt</span>
-                <span>Upload a new file</span>
+                <span>Start again</span>
             </button>
             <p>Built with ❤️ • Your data never leaves this browser.</p>
         </footer>

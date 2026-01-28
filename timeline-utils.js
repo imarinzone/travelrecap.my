@@ -162,7 +162,6 @@
                         lng: lng,
                         startTime: segment.startTime,
                         endTime: segment.endTime,
-                        address: placeLocation && placeLocation.address,
                         name: placeLocation && placeLocation.name,
                         probability: visit.probability,
                         placeId: visit.topCandidate.placeId,
@@ -185,9 +184,8 @@
             totalDistanceMeters: 0,
             totalVisits: 0,
             countries: new Set(),
-            cities: new Set(),
             transport: {}, // { type: { count, distanceMeters, durationMs } }
-            visits: {},    // { placeId: { name, count, location, address } }
+            visits: {},    // { placeId: { name, count, location, country } }
             visitTypes: {} // { type: count } e.g. "Restaurant": 10
         };
 
@@ -221,7 +219,6 @@
                     const placeLocation = visit.topCandidate.placeLocation || {};
                     const placeId = visit.topCandidate.placeId;
                     const name = placeLocation.name || "Unknown Place";
-                    const address = placeLocation.address;
                     let country = segment.country || null;
 
                     // If we don't already have a country on the segment, try offline lookup from lat/lng
@@ -232,24 +229,15 @@
                         }
                     }
 
-                    // Track Unique Cities/Countries
+                    // Track Unique Countries
                     if (country) {
                         stats.countries.add(country);
-                    } else if (address) {
-                        // Fallback heuristic based on address if country lookup fails
-                        extractLocationDetails(address, stats.cities, stats.countries);
-                    }
-
-                    // Always keep city stats up to date
-                    if (address) {
-                        extractLocationDetails(address, stats.cities, new Set()); // temporary set: citiesSet still updated
                     }
 
                     if (!stats.visits[placeId]) {
                         stats.visits[placeId] = {
                             name: name,
                             count: 0,
-                            address: address,
                             latLng: placeLocation.latLng,
                             country: country || null
                         };
@@ -318,21 +306,9 @@
         return stats;
     }
 
-    // Heuristic to extract city and country from address strings
-    function extractLocationDetails(address, citiesSet, countriesSet) {
-        const parts = address.split(',').map(p => p.trim());
-        if (parts.length > 0) {
-            countriesSet.add(parts[parts.length - 1]); // Last format is usually country
-        }
-        if (parts.length > 2) {
-            citiesSet.add(parts[parts.length - 3] || parts[parts.length - 2] || parts[0]);
-        }
-    }
-
     exports.processTimelineData = processTimelineData;
     exports.calculateStats = calculateStats;
     exports.calculateAdvancedStats = calculateAdvancedStats;
-    exports.extractLocationDetails = extractLocationDetails;
     exports.setCountryGeoJSON = setCountryGeoJSON;
     exports.Logger = Logger;
 

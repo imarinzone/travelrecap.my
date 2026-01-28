@@ -2,15 +2,16 @@
 
 Your travel recap using Google Maps Timeline data.
 
-A single-page static website that recreates the Google Timeline 2024 update interface, displaying your travel statistics, trends, highlights, and location data in a beautiful, modern UI.
+A single-page static website that presents your travel statistics, trends, and location data in a **typography-first storytelling layout** with scroll-fade animations and subtle vector infographics.
 
 ## Features
 
-- **Travel Statistics**: View your countries, cities, and places visited
-- **Travel Summary**: See your total distance traveled and percentage around the world
-- **Travel Modes**: Breakdown by walking, driving, transit, motorcycling, and flying
-- **Visit Trends**: Track shopping and food & drink visits
-- **City & Place Highlights**: Visual gallery of visited cities and places
+- **Typography-First Design**: Large, bold statistics that tell your travel story as you scroll
+- **Scroll Animations**: Content fades in smoothly from background to foreground as you navigate
+- **Vector Background Infographics**: Subtle globe and journey-line illustrations enhance the visual experience
+- **Travel Statistics**: View total distance, unique places, countries visited, and check-ins
+- **Time & Records**: See time distribution (moving vs stationary) and personal records
+- **Environmental Impact**: Estimated carbon footprint and tree offset calculations
 - **Interactive Map**: Visualize your timeline visits on a map by uploading your data
 - **Privacy Focused**: All data processing happens locally in your browser. No data is sent to any server.
 
@@ -23,8 +24,6 @@ travelrecap.my/
 ├── data/
 │   ├── timeline.json       # Example/Default travel data (ignored by git)
 │   ├── countries.geojson   # Country borders for offline reverse geocoding (committed)
-├── images/
-│   └── globe.png           # Globe image for travel summary card
 └── README.md               # This file
 ```
 
@@ -68,13 +67,24 @@ This application is **100% Client-Side**.
 - No data is uploaded to any server or database.
 - The "Lat/Long" coordinates are used to plot markers directly on the map.
 
+## Visual Design
+
+The UI follows a **storytelling approach**:
+
+1. **Large Typography**: Key statistics are displayed in oversized text (up to 8xl) that dominates each section
+2. **Vertical Scroll Flow**: Content is arranged vertically with generous spacing, revealing stats as you scroll
+3. **Fade-in Animations**: Each section animates from transparent/scaled to full visibility using `IntersectionObserver`
+4. **Vector Backgrounds**: Subtle SVG infographics (globe meridians, journey paths, dotted trails) provide visual depth without distraction
+5. **Dark Mode Support**: All text and background elements adapt to light/dark themes
+
 ## Technologies Used
 
 - **HTML5**: Structure and semantic markup
 - **Tailwind CSS**: Utility-first CSS framework (via CDN)
-- **Vanilla JavaScript**: Data processing and DOM manipulation
+- **Vanilla JavaScript**: Data processing, DOM manipulation, and scroll animations
 - **Leaflet.js**: Interactive maps
 - **CartoDB**: Map tiles
+- **IntersectionObserver API**: Scroll-triggered animations
 - **Jest**: Unit testing framework (via Node.js)
 
 ## Development & Testing
