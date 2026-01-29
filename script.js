@@ -106,6 +106,7 @@ function initMap() {
 function initializeYearFilter(availableYears) {
     const timelineContainer = document.getElementById('timeline-years');
     const timelineSelectorContainer = document.getElementById('timeline-selector-container');
+    const yearTimelineBar = document.getElementById('year-timeline-bar');
     
     if (!timelineContainer) return;
     
@@ -119,10 +120,15 @@ function initializeYearFilter(availableYears) {
     // Sort years ascending for timeline display (oldest to newest left to right)
     availableYears.sort((a, b) => a - b);
     
-    // Show the timeline selector if we have years
+    // Show the timeline selector and bar only if we have years (i.e., data processed)
     if (availableYears.length > 0 && timelineSelectorContainer) {
         timelineSelectorContainer.classList.remove('hidden');
         timelineSelectorContainer.classList.add('flex');
+        if (yearTimelineBar) {
+            yearTimelineBar.classList.remove('hidden');
+        }
+    } else if (yearTimelineBar) {
+        yearTimelineBar.classList.add('hidden');
     }
     
     // Add "All" button first
@@ -1906,9 +1912,13 @@ function toggleFullscreen() {
         const isOpen = !mapOverlay.classList.contains('hidden');
         if (isOpen) {
             mapOverlay.classList.add('hidden');
+            const allTimeText = document.getElementById('all-time-foreground-text');
+            if (allTimeText) allTimeText.classList.remove('hidden');
             isMapOverlayOpen = false;
         } else {
             mapOverlay.classList.remove('hidden');
+            const allTimeText = document.getElementById('all-time-foreground-text');
+            if (allTimeText) allTimeText.classList.add('hidden');
             isMapOverlayOpen = true;
             setTimeout(() => {
                 if (map) restoreMapView();
@@ -2026,6 +2036,8 @@ if (document.readyState === 'loading') {
             mapCloseBtn.addEventListener('click', () => {
                 const mapOverlay = document.getElementById('map-overlay');
                 if (mapOverlay) mapOverlay.classList.add('hidden');
+                const allTimeText = document.getElementById('all-time-foreground-text');
+                if (allTimeText) allTimeText.classList.remove('hidden');
                 isMapOverlayOpen = false;
             });
         }
@@ -2371,7 +2383,7 @@ function initGlobeMapReveal() {
             }
             
             if (hint) hint.style.opacity = '1';
-            if (allTimeText) allTimeText.classList.add('visible');
+            if (allTimeText && !isMapOverlayOpen) allTimeText.classList.remove('hidden');
             
             if (!clickHandlerAttached) {
                 clickHandlerAttached = true;
@@ -2382,6 +2394,7 @@ function initGlobeMapReveal() {
                     globeMapOpened = true;
                     globeContainer.style.opacity = '0';
                     if (hint) hint.style.opacity = '0';
+                    if (allTimeText) allTimeText.classList.add('hidden');
                     if (mapOverlay) {
                         isMapOverlayOpen = true;
                         mapOverlay.classList.remove('hidden');

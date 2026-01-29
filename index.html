@@ -980,25 +980,11 @@
             opacity: 0.8;
         }
 
-        /* All-time foreground text */
+        /* All-time lifetime stats text (now inline above globe) */
         .all-time-foreground-text {
-            position: fixed;
-            left: 3rem;
-            top: 50%;
-            transform: translateY(-50%);
-            width: min(360px, 38vw);
-            z-index: 200;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-        }
-
-        .all-time-foreground-text .interactive {
-            pointer-events: auto;
-        }
-
-        .all-time-foreground-text.visible {
-            opacity: 1;
+            max-width: 36rem;
+            margin: 4rem auto 0;
+            padding: 0 1rem;
         }
         
         /* Timeline year button styles (modern pill) */
@@ -1032,13 +1018,13 @@
         
         .timeline-year-btn.active {
             color: #ffffff;
-            background: #3b82f6;
-            box-shadow: 0 10px 22px rgba(59, 130, 246, 0.45);
+            background: transparent;
+            box-shadow: none;
         }
 
         body.dark .timeline-year-btn.active {
-            background: #3b82f6;
-            box-shadow: 0 10px 22px rgba(59, 130, 246, 0.45);
+            background: transparent;
+            box-shadow: none;
         }
         
         /* Legacy classes for backward compatibility - style same as modern buttons */
@@ -1071,8 +1057,8 @@
         .timeline-year-point.active,
         .timeline-all-years.active {
             color: #ffffff;
-            background: #3b82f6;
-            box-shadow: 0 10px 22px rgba(59, 130, 246, 0.45);
+            background: transparent;
+            box-shadow: none;
         }
 
         .glow-blue-btn {
@@ -1881,9 +1867,15 @@
                     </button>
                 </div>
 
-                <span class="taskbar-divider hidden sm:inline"></span>
+            </div>
+        </div>
+    </div>
 
-                <!-- Timeline Year Selector (Centered) -->
+    <!-- Top Year Timeline Bar (hidden until data is processed) -->
+    <div id="year-timeline-bar" class="fixed top-4 left-0 right-0 z-[300] pointer-events-none hidden">
+        <div class="taskbar-shell pointer-events-none">
+            <div class="taskbar justify-center pointer-events-auto">
+                <!-- Timeline Year Selector (Centered, top-only) -->
                 <div id="timeline-selector-container" class="hidden taskbar-section">
                     <div class="timeline-modern-wrapper">
                         <div id="timeline-years" class="timeline-modern-container">
@@ -1905,7 +1897,7 @@
         class="fixed top-20 left-0 w-[500px] h-[500px] z-0 opacity-0 transition-opacity duration-1000">
     </div>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative z-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-10 relative z-10">
 
         <!-- Header -->
         <header class="text-center mb-12">
@@ -2125,13 +2117,8 @@
                 </div>
             </section>
 
-            <!-- Globe to Map Reveal Section -->
-            <section id="globe-map-reveal" class="relative min-h-[120vh] mt-24">
-                <div class="sticky top-0 h-screen flex items-center justify-center overflow-hidden"></div>
-            </section>
-
-            <!-- All-time stats (foreground text only) -->
-            <div id="all-time-foreground-text" class="all-time-foreground-text text-gray-900 dark:text-white">
+            <!-- All-time stats (text above globe) -->
+            <div id="all-time-foreground-text" class="all-time-foreground-text text-gray-900 dark:text-white relative z-20">
                 <p class="text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">All-time</p>
                 <h3 class="text-2xl font-bold mb-6">Lifetime Stats</h3>
                 <div class="space-y-3 text-sm text-gray-600 dark:text-gray-300">
@@ -2152,6 +2139,11 @@
                     Click the globe to open the map
                 </div>
             </div>
+
+            <!-- Globe to Map Reveal Section -->
+            <section id="globe-map-reveal" class="relative min-h-[120vh] mt-16">
+                <div class="sticky top-0 h-screen flex items-center justify-center overflow-hidden"></div>
+            </section>
 
             <!-- Map Overlay (opened on globe click) -->
             <section id="map-overlay" class="hidden fixed inset-0 z-40 p-6 bg-black/40 backdrop-blur-sm">
@@ -2182,7 +2174,7 @@
 
         </div>
 
-        <footer class="mt-20 text-center text-gray-400 dark:text-gray-500 text-sm pb-10 space-y-4">
+        <footer class="mt-20 text-center text-gray-400 dark:text-gray-500 text-sm pb-10 space-y-4 relative z-20">
             <p>Built in India with ❤️ by <a href="https://github.com/imarinzone" class="underline hover:text-gray-600 dark:hover:text-gray-300">@imarinzone</a></p>
         </footer>
 
