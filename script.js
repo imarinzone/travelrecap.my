@@ -1480,16 +1480,6 @@ function drawShareOverlay(canvas, details, pixelRatio, isDark) {
     const accent = isDark ? '#38bdf8' : '#0ea5e9';
     const cardBg = isDark ? 'rgba(15, 23, 42, 0.82)' : 'rgba(255, 255, 255, 0.92)';
 
-    // Gradient overlay for readability — dark theme only; light theme has no overlay to avoid a visible band in the center
-    if (isDark) {
-        const gradient = ctx.createLinearGradient(0, 0, overlayEnd, 0);
-        gradient.addColorStop(0, 'rgba(15, 23, 42, 0.94)');
-        gradient.addColorStop(0.65, 'rgba(15, 23, 42, 0.5)');
-        gradient.addColorStop(1, 'transparent');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, w, h);
-    }
-
     // Accent bar next to title
     const barW = 5;
     const barH = titleSize * 0.72;
@@ -1574,13 +1564,20 @@ async function shareCurrentView(mode) {
     showLoadingScreen('Preparing your share image…');
 
     try {
-        const node = document.getElementById('globe-container');
+        const mapOverlay = document.getElementById('map-overlay');
+        const isMapOpen = mapOverlay && !mapOverlay.classList.contains('hidden');
+        const mapContainer = document.getElementById('map-container-wrapper');
+        const globeContainer = document.getElementById('globe-container');
+
+        const useMapBackground = isMapOpen && mapContainer && map;
+        const node = useMapBackground ? mapContainer : globeContainer;
+
         if (!node) {
-            showShareToast('Globe is not available to capture.', 'error');
+            showShareToast(useMapBackground ? 'Map is not available to capture.' : 'Globe is not available to capture.', 'error');
             return;
         }
 
-        const fileImages = node.querySelectorAll('img[src^="file://"]');
+        const fileImages = node.querySelectorAll ? node.querySelectorAll('img[src^="file://"]') : [];
         if (fileImages.length && window.location.protocol === 'file:') {
             showShareToast('Local images cannot be captured from file://. Run a local server for full capture.', 'info');
         }
@@ -1628,23 +1625,21 @@ async function shareCurrentView(mode) {
         let offsetX = 0;
         let offsetY = 0;
 
-        // Scale to cover the story frame while keeping the globe prominent,
-        // then bias slightly so the globe sits closer to the visual center.
         if (sourceAspect > targetAspect) {
-            // Source is wider than target — match height and crop sides.
             drawHeight = STORY_HEIGHT;
             drawWidth = canvas.width * (STORY_HEIGHT / canvas.height);
             offsetX = (STORY_WIDTH - drawWidth) / 2;
         } else {
-            // Source is taller than target — match width and crop top/bottom.
             drawWidth = STORY_WIDTH;
             drawHeight = canvas.height * (STORY_WIDTH / canvas.width);
             offsetY = (STORY_HEIGHT - drawHeight) / 2;
         }
 
-        // Shift the globe toward the center so more of it is visible and it sits in the middle of the share image.
-        const horizontalBias = STORY_WIDTH * 0.14; // ~14% — center the globe and show more of it
-        offsetX += horizontalBias;
+        if (!useMapBackground) {
+            // Shift the globe toward the center so more of it is visible and it sits in the middle of the share image.
+            const horizontalBias = STORY_WIDTH * 0.14;
+            offsetX += horizontalBias;
+        }
 
         storyCtx.drawImage(canvas, offsetX, offsetY, drawWidth, drawHeight);
 
@@ -1663,7 +1658,8 @@ async function shareCurrentView(mode) {
             await navigator.share({
                 files: [file],
                 title: 'Travel Recap',
-                text: 'My travel recap stats.'
+                text: 'My travel recap stats. www.mytravelrecap.com',
+                url: 'https://www.mytravelrecap.com'
             });
             showShareToast('Shared. You can post it from the share sheet.', 'success');
         } else {
