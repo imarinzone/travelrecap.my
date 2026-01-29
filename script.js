@@ -8,6 +8,13 @@ let allSegments = []; // Store all timeline segments (visits and activities)
 let globe = null; // Globe instance
 let summaryGlobe = null;
 let isSummaryGlobeSyncing = false;
+let isMapOverlayOpen = false;
+let lastMapView = null;
+let isMapInitialized = false;
+let mapYears = [];
+let isDataLoaded = false;
+let lastYearStats = null;
+let lastAllTimeStats = null;
 
 // CartoDB Tile Layer URLs
 const tileLayers = {
@@ -46,6 +53,7 @@ async function loadCountryGeoJSON() {
 
 // Initialize map
 function initMap() {
+    if (isMapInitialized) return;
     // Check if Leaflet is loaded
     if (typeof L === 'undefined') {
         console.error('Leaflet library not loaded');
@@ -80,8 +88,10 @@ function initMap() {
     markers = L.layerGroup();
     map.addLayer(markers);
 
-    // Initialize year dropdown
-    initializeYearFilter([]);
+    // Initialize year timeline if data already loaded
+    if (isDataLoaded && mapYears.length > 0) {
+        initializeYearFilter(mapYears);
+    }
 
     // Load saved year preference
     const savedYear = localStorage.getItem('mapYear');
@@ -91,6 +101,7 @@ function initMap() {
 
     // Setup fullscreen listeners
     setupFullscreenListeners();
+    isMapInitialized = true;
 }
 
 // Initialize year filter as modern horizontal timeline
@@ -388,6 +399,113 @@ function handleFileUpload(event) {
     reader.readAsText(file);
 }
 
+function buildDemoData() {
+    const places = [
+        { id: 'demo-nyc', name: 'New York City', lat: 40.7128, lng: -74.0060, country: 'United States' },
+        { id: 'demo-paris', name: 'Paris', lat: 48.8566, lng: 2.3522, country: 'France' },
+        { id: 'demo-tokyo', name: 'Tokyo', lat: 35.6762, lng: 139.6503, country: 'Japan' },
+        { id: 'demo-delhi', name: 'New Delhi', lat: 28.6139, lng: 77.2090, country: 'India' }
+    ];
+
+    const activities = [
+        { type: 'IN_PASSENGER_VEHICLE', distanceMeters: 185000 },
+        { type: 'WALKING', distanceMeters: 12000 },
+        { type: 'FLYING', distanceMeters: 920000 }
+    ];
+
+    const semanticSegments = [];
+    const years = [2019, 2020, 2021, 2022, 2023, 2024];
+
+    years.forEach((year, index) => {
+        const primaryPlace = places[index % places.length];
+        const secondaryPlace = places[(index + 1) % places.length];
+        const activityOne = activities[index % activities.length];
+        const activityTwo = activities[(index + 1) % activities.length];
+
+        const toLatLng = (lat, lng) => `${lat.toFixed(6)}°, ${lng.toFixed(6)}°`;
+
+        semanticSegments.push({
+            startTime: `${year}-03-10T09:00:00Z`,
+            endTime: `${year}-03-10T18:00:00Z`,
+            country: primaryPlace.country,
+            visit: {
+                topCandidate: {
+                    placeLocation: {
+                        name: primaryPlace.name,
+                        latLng: toLatLng(primaryPlace.lat, primaryPlace.lng)
+                    },
+                    placeId: primaryPlace.id
+                },
+                probability: 0.92
+            }
+        });
+
+        semanticSegments.push({
+            startTime: `${year}-06-22T10:30:00Z`,
+            endTime: `${year}-06-22T15:45:00Z`,
+            country: secondaryPlace.country,
+            visit: {
+                topCandidate: {
+                    placeLocation: {
+                        name: secondaryPlace.name,
+                        latLng: toLatLng(secondaryPlace.lat, secondaryPlace.lng)
+                    },
+                    placeId: secondaryPlace.id
+                },
+                probability: 0.87
+            }
+        });
+
+        semanticSegments.push({
+            startTime: `${year}-07-01T07:00:00Z`,
+            endTime: `${year}-07-01T11:00:00Z`,
+            activity: {
+                distanceMeters: activityOne.distanceMeters,
+                topCandidate: { type: activityOne.type }
+            }
+        });
+
+        semanticSegments.push({
+            startTime: `${year}-10-12T12:00:00Z`,
+            endTime: `${year}-10-12T15:00:00Z`,
+            activity: {
+                distanceMeters: activityTwo.distanceMeters,
+                topCandidate: { type: activityTwo.type }
+            }
+        });
+    });
+
+    return { semanticSegments };
+}
+
+function loadDemoData() {
+    const statusSpan = document.getElementById('upload-status');
+    if (statusSpan) {
+        statusSpan.textContent = 'Loading demo data...';
+        statusSpan.className = 'text-sm font-medium text-gray-500 dark:text-gray-400 min-h-[20px]';
+    }
+
+    showLoadingScreen('Loading demo experience…');
+    setTimeout(() => {
+        try {
+            const demoData = buildDemoData();
+            processAndRenderData(demoData);
+            if (statusSpan) {
+                statusSpan.textContent = 'Demo loaded!';
+                statusSpan.className = 'text-sm font-medium text-green-600';
+            }
+        } catch (error) {
+            timelineUtils.Logger.error('Error loading demo data:', error);
+            if (statusSpan) {
+                statusSpan.textContent = 'Demo failed to load.';
+                statusSpan.className = 'text-sm font-medium text-red-600';
+            }
+        } finally {
+            hideLoadingScreen();
+        }
+    }, 50);
+}
+
 // Process Google Timeline JSON & Update UI
 function processAndRenderData(json) {
     timelineUtils.Logger.time('Data Processing');
@@ -397,6 +515,8 @@ function processAndRenderData(json) {
     allSegments = processed.allSegments;
     allLocations = processed.allLocations;
     const years = processed.years;
+    mapYears = [...years];
+    isDataLoaded = true;
 
     timelineUtils.Logger.info(`Parsed ${allLocations.length} locations`);
     timelineUtils.Logger.timeEnd('Data Processing');
@@ -449,6 +569,11 @@ function processAndRenderData(json) {
         uploadSection.classList.add('hidden');
     }
 
+    const shareButton = document.getElementById('taskbar-share');
+    if (shareButton) {
+        shareButton.classList.remove('hidden');
+    }
+
     // Reveal "Upload a new file" action in the footer
     const restartButton = document.getElementById('restart-button');
     if (restartButton) {
@@ -486,6 +611,9 @@ function renderDashboard() {
 
     const allTimeStats = timelineUtils.calculateStats(allSegments);
     const advancedStats = timelineUtils.calculateAdvancedStats(statsSegments);
+
+    lastYearStats = stats;
+    lastAllTimeStats = allTimeStats;
 
     // 4. Update UI Sections
     renderStatistics(stats);
@@ -1259,29 +1387,97 @@ function triggerDownload(blob, filename) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-window.shareCard = async function (elementId) {
-    const node = document.getElementById(elementId);
-    if (!node) return;
+function openShareDialog() {
+    const dialog = document.getElementById('share-dialog');
+    if (dialog) dialog.classList.remove('hidden');
+}
 
-    const fileImages = node.querySelectorAll('img[src^="file://"]');
-    const hasFileImages = fileImages.length > 0;
-    const btn = node.querySelector('button[onclick^="shareCard"]');
-    const originalContent = btn ? btn.innerHTML : '';
-    if (btn) btn.innerHTML = '<span class="flex items-center gap-2"><span class="animate-spin material-icons-round text-sm">refresh</span> Converting...</span>';
+function closeShareDialog() {
+    const dialog = document.getElementById('share-dialog');
+    if (dialog) dialog.classList.add('hidden');
+}
 
-    // Temporary style adjustments for better capture
-    const originalTransform = node.style.transform;
-    node.style.transform = 'none';
+function buildShareDetails(mode) {
+    const useOverall = mode === 'overall';
+    const stats = useOverall ? lastAllTimeStats : lastYearStats;
+    if (!stats) return null;
+
+    const distanceKm = Math.round(stats.totalDistanceMeters / 1000).toLocaleString();
+    const visits = stats.totalVisits.toLocaleString();
+    const countries = stats.countries.size.toLocaleString();
+    const yearLabel = selectedYear ? selectedYear : 'All Years';
+    const title = useOverall ? 'Travel Recap — Overall' : `Travel Recap — ${yearLabel}`;
+
+    return {
+        title,
+        lines: [
+            `Distance: ${distanceKm} km`,
+            `Visits: ${visits}`,
+            `Countries: ${countries}`
+        ]
+    };
+}
+
+function drawShareOverlay(canvas, title, lines, pixelRatio) {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const padding = 20 * pixelRatio;
+    const titleSize = 20 * pixelRatio;
+    const lineSize = 16 * pixelRatio;
+    const lineHeight = 22 * pixelRatio;
+    const titleHeight = titleSize + 6 * pixelRatio;
+    const boxHeight = padding * 2 + titleHeight + (lines.length * lineHeight);
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
+    ctx.fillRect(0, 0, canvas.width, boxHeight);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `600 ${titleSize}px Outfit, sans-serif`;
+    ctx.fillText(title, padding, padding + titleSize);
+
+    ctx.font = `400 ${lineSize}px Outfit, sans-serif`;
+    lines.forEach((line, index) => {
+        const y = padding + titleHeight + (index + 1) * lineHeight;
+        ctx.fillText(line, padding, y);
+    });
+}
+
+async function shareCurrentView(mode) {
+    if (!lastAllTimeStats || !lastYearStats) {
+        showShareToast('Load a timeline first to share.', 'error');
+        return;
+    }
+
+    const details = buildShareDetails(mode);
+    if (!details) {
+        showShareToast('No share details available yet.', 'error');
+        return;
+    }
+
+    closeShareDialog();
+    showLoadingScreen('Preparing your share image…');
 
     try {
-        if (hasFileImages && window.location.protocol === 'file:') {
+        const node = document.getElementById('globe-container');
+        if (!node) {
+            showShareToast('Globe is not available to capture.', 'error');
+            return;
+        }
+
+        const fileImages = node.querySelectorAll('img[src^="file://"]');
+        if (fileImages.length && window.location.protocol === 'file:') {
             showShareToast('Local images cannot be captured from file://. Run a local server for full capture.', 'info');
         }
 
-        const blob = await htmlToImage.toBlob(node, {
-            backgroundColor: '#f5f7fa', // Light background for the image
-            pixelRatio: 2, // High resolution
+        const pixelRatio = 2;
+        const themeBackground = document.body.classList.contains('dark') ? '#0f172a' : '#f5f7fa';
+
+        const canvas = await htmlToImage.toCanvas(node, {
+            backgroundColor: themeBackground,
+            pixelRatio,
             filter: (domNode) => {
+                if (domNode.id === 'share-dialog') return false;
                 if (domNode.tagName === 'IMG') {
                     const src = domNode.getAttribute('src') || '';
                     if (src.startsWith('file://')) {
@@ -1296,41 +1492,70 @@ window.shareCard = async function (elementId) {
             }
         });
 
+        drawShareOverlay(canvas, details.title, details.lines, pixelRatio);
+
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
         if (!blob) {
             throw new Error('Image capture failed.');
         }
 
-        const filename = `travel-recap-${new Date().getTime()}.png`;
+        const filename = `travel-recap-${mode}-${Date.now()}.png`;
         const file = new File([blob], filename, { type: blob.type || 'image/png' });
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            if (btn) btn.innerHTML = '<span class="flex items-center gap-2"><span class="material-icons-round text-sm">ios_share</span> Sharing...</span>';
             await navigator.share({
                 files: [file],
                 title: 'Travel Recap',
                 text: 'My travel recap stats.'
             });
-            if (btn) btn.innerHTML = '<span class="flex items-center gap-2"><span class="material-icons-round text-sm">check_circle</span> Shared!</span>';
-            showShareToast('Shared. You can post it to Instagram from the share sheet.', 'success');
+            showShareToast('Shared. You can post it from the share sheet.', 'success');
         } else {
             triggerDownload(blob, filename);
-            if (btn) btn.innerHTML = '<span class="flex items-center gap-2"><span class="material-icons-round text-sm">download_done</span> Saved!</span>';
             showShareToast('Downloaded. Upload to Instagram manually.', 'info');
         }
     } catch (error) {
         if (error.name === 'AbortError') {
             timelineUtils.Logger.warn('Share canceled by user');
-            if (btn) btn.innerHTML = originalContent;
             return;
         }
         timelineUtils.Logger.error('Error sharing image:', error);
-        if (btn) btn.innerHTML = '<span class="flex items-center gap-2"><span class="material-icons-round text-sm">error</span> Error</span>';
         showShareToast('Could not share. Please try again.', 'error');
     } finally {
-        node.style.transform = originalTransform;
-        setTimeout(() => { if (btn) btn.innerHTML = originalContent; }, 2000);
+        hideLoadingScreen();
     }
-};
+}
+
+function initShareControls() {
+    const shareButton = document.getElementById('taskbar-share');
+    const dialog = document.getElementById('share-dialog');
+    const closeButton = document.getElementById('share-dialog-close');
+    const overallButton = document.getElementById('share-overall');
+    const yearButton = document.getElementById('share-year');
+
+    if (shareButton) {
+        shareButton.addEventListener('click', openShareDialog);
+    }
+
+    if (closeButton) {
+        closeButton.addEventListener('click', closeShareDialog);
+    }
+
+    if (dialog) {
+        dialog.addEventListener('click', (event) => {
+            if (event.target === dialog) {
+                closeShareDialog();
+            }
+        });
+    }
+
+    if (overallButton) {
+        overallButton.addEventListener('click', () => shareCurrentView('overall'));
+    }
+
+    if (yearButton) {
+        yearButton.addEventListener('click', () => shareCurrentView('year'));
+    }
+}
 
 function renderTravelSummary(stats) {
     const worldTripsEl = document.getElementById('world-percentage');
@@ -1480,6 +1705,7 @@ function renderHighlights(visitStats, segments) {
 
 function renderAllTimeStats(stats) {
     const container = document.getElementById('all-time-stats');
+    if (!container) return;
     container.innerHTML = '';
 
     const statsData = [
@@ -1496,10 +1722,18 @@ function renderAllTimeStats(stats) {
         `;
         container.appendChild(div);
     });
+
+    const distanceEl = document.getElementById('all-time-distance');
+    const visitsEl = document.getElementById('all-time-visits');
+    const countriesEl = document.getElementById('all-time-countries');
+    if (distanceEl) distanceEl.textContent = statsData[0].value;
+    if (visitsEl) visitsEl.textContent = statsData[1].value;
+    if (countriesEl) countriesEl.textContent = statsData[2].value;
 }
 
 // Helper: Render map markers (from previous implementation, slightly adjusted)
 function renderMarkers() {
+    if (!map || !markers) return;
     // Clear existing markers
     markers.clearLayers();
 
@@ -1530,8 +1764,16 @@ function renderMarkers() {
         bounds.extend([loc.lat, loc.lng]);
     });
 
-    // Fit map to bounds
-    map.fitBounds(bounds, { padding: [50, 50] });
+    // Fit map to bounds, but avoid over-zoom on single points
+    const northEast = bounds.getNorthEast();
+    const southWest = bounds.getSouthWest();
+    const isSinglePoint = northEast.lat === southWest.lat && northEast.lng === southWest.lng;
+    if (isSinglePoint) {
+        map.setView([northEast.lat, northEast.lng], 8);
+    } else {
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
+    }
+    lastMapView = { center: map.getCenter(), zoom: map.getZoom() };
 
     // Add markers as individual points with aesthetic styling
     filteredLocations.forEach(loc => {
@@ -1554,17 +1796,22 @@ function renderMarkers() {
     timelineUtils.Logger.info(`Rendered ${filteredLocations.length} markers`);
 }
 
+function restoreMapView() {
+    if (!map) return;
+    map.invalidateSize();
+    if (lastMapView && lastMapView.center && typeof lastMapView.zoom === 'number') {
+        map.setView(lastMapView.center, lastMapView.zoom, { animate: false });
+    }
+}
+
 // Build popup content for marker
 function buildPopupContent(location) {
     let content = '<div class="text-sm">';
-
-    if (location.name) {
-        content += `<strong>${location.name}</strong><br>`;
-    }
-
-    if (!location.name) {
-        content += `<strong>Unknown Location</strong><br>`;
-    }
+    const hasName = location.name && location.name.trim().length > 0;
+    const title = hasName
+        ? location.name
+        : (location.country || location.placeId || 'Location');
+    content += `<strong>${title}</strong><br>`;
 
     if (location.startTime) {
         const date = new Date(location.startTime);
@@ -1628,6 +1875,26 @@ function onYearFilterChange(event) {
 // Toggle fullscreen
 function toggleFullscreen() {
     const mapSection = document.querySelector('#map-container-wrapper').closest('section');
+    const mapOverlay = document.getElementById('map-overlay');
+
+    // Prefer overlay-based "fullscreen" so taskbar stays visible
+    if (mapOverlay) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4d4efc66-24e5-4d09-bf3f-b903a435067a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1634',message:'toggleFullscreen overlay branch',data:{overlayHidden:mapOverlay.classList.contains('hidden')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+        // #endregion agent log
+        const isOpen = !mapOverlay.classList.contains('hidden');
+        if (isOpen) {
+            mapOverlay.classList.add('hidden');
+            isMapOverlayOpen = false;
+        } else {
+            mapOverlay.classList.remove('hidden');
+            isMapOverlayOpen = true;
+            setTimeout(() => {
+                if (map) restoreMapView();
+            }, 100);
+        }
+        return;
+    }
 
     if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
         // Enter fullscreen
@@ -1665,7 +1932,7 @@ function handleFullscreenChange() {
         fullscreenBtn.setAttribute('title', 'Exit fullscreen');
         // Resize map after entering fullscreen
         setTimeout(() => {
-            map.invalidateSize();
+            restoreMapView();
         }, 100);
     } else {
         fullscreenIcon.textContent = 'fullscreen';
@@ -1673,7 +1940,7 @@ function handleFullscreenChange() {
         fullscreenBtn.setAttribute('title', 'Toggle fullscreen');
         // Resize map after exiting fullscreen
         setTimeout(() => {
-            map.invalidateSize();
+            restoreMapView();
         }, 100);
     }
 }
@@ -1715,7 +1982,7 @@ if (document.readyState === 'loading') {
         initGlobalTheme();
         
         // Initialize map
-        initMap();
+        // Defer map initialization until user opens the map overlay.
         
         // Initialize background globe
         initBackgroundGlobe();
@@ -1733,18 +2000,34 @@ if (document.readyState === 'loading') {
         const fullscreenBtn = document.getElementById('map-fullscreen');
         if (fullscreenBtn) fullscreenBtn.addEventListener('click', toggleFullscreen);
 
+        const mapCloseBtn = document.getElementById('map-overlay-close');
+        if (mapCloseBtn) {
+            mapCloseBtn.addEventListener('click', () => {
+                const mapOverlay = document.getElementById('map-overlay');
+                if (mapOverlay) mapOverlay.classList.add('hidden');
+                isMapOverlayOpen = false;
+            });
+        }
+
         // File input listener
         const fileInput = document.getElementById('timeline-file-input');
         if (fileInput) {
             fileInput.addEventListener('change', handleFileUpload);
         }
+
+        const demoButton = document.getElementById('demo-button');
+        if (demoButton) {
+            demoButton.addEventListener('click', loadDemoData);
+        }
+
+        initShareControls();
     });
 } else {
     // Initialize global theme first
     initGlobalTheme();
     
     // Initialize map
-    initMap();
+    // Defer map initialization until user opens the map overlay.
     
     // Initialize background globe
     initBackgroundGlobe();
@@ -1767,6 +2050,13 @@ if (document.readyState === 'loading') {
     if (fileInput) {
         fileInput.addEventListener('change', handleFileUpload);
     }
+
+    const demoButton = document.getElementById('demo-button');
+    if (demoButton) {
+        demoButton.addEventListener('click', loadDemoData);
+    }
+
+    initShareControls();
 }
 
 // Globe Scroll Animation
@@ -1898,18 +2188,24 @@ function initScrollAnimations() {
  */
 function initGlobeMapReveal() {
     const revealSection = document.getElementById('globe-map-reveal');
-    const revealMapWrapper = document.getElementById('reveal-map-wrapper');
     const globeContainer = document.getElementById('globe-container');
-    const dashboardContent = document.getElementById('dashboard-content');
+    const hint = document.getElementById('globe-map-hint');
+    const mapOverlay = document.getElementById('map-overlay');
+    const allTimeText = document.getElementById('all-time-foreground-text');
     
-    if (!revealSection || !revealMapWrapper || !globeContainer) return;
+    if (!revealSection || !globeContainer) return;
+    
+    let globeMapOpened = false;
+    let clickHandlerAttached = false;
+    let rotationStopped = false;
     
     // Original globe position values
     const originalTop = 80; // 5rem = 80px
-    const originalLeft = 0;
+    const originalLeft = 40;
     const originalSize = 500;
-    const maxExpandedSize = 700; // Max size before centering
-    const centeredSize = 700; // Size when centered
+    const maxZoomSize = originalSize * 1.5;
+    const maxExpandedSize = maxZoomSize; // Max size before centering
+    const centeredSize = maxZoomSize; // Size when centered
     const originalOpacity = 0.5;
     
     // Remove any existing transitions for smooth scroll-linked animation
@@ -1949,7 +2245,19 @@ function initGlobeMapReveal() {
         const origCenterY = originalTop + originalSize / 2;
         
         // Size that covers the whole screen (slightly oversized to fill edges)
-        const fullScreenSize = Math.max(viewportWidth, viewportHeight) * 1.15;
+        const fullScreenSize = Math.min(Math.max(viewportWidth, viewportHeight) * 1.15, maxZoomSize);
+
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/4d4efc66-24e5-4d09-bf3f-b903a435067a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1953',message:'reveal progress state',data:{revealProgress,globeMapOpened,clickHandlerAttached,hasMapOverlay:!!mapOverlay},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+        // #endregion agent log
+
+        if (globeMapOpened || isMapOverlayOpen) {
+            globeContainer.style.opacity = '0';
+            globeContainer.style.zIndex = '0';
+            if (hint) hint.style.opacity = '0';
+            if (allTimeText) allTimeText.classList.remove('visible');
+            return;
+        }
 
         if (revealProgress <= 0) {
             // Not in reveal section yet - globe expands in place as user scrolls
@@ -1964,8 +2272,13 @@ function initGlobeMapReveal() {
             globeContainer.style.opacity = originalOpacity;
             globeContainer.style.zIndex = '0';
             
-            revealMapWrapper.style.opacity = '0';
-            revealMapWrapper.style.transform = 'scale(0.9)';
+            if (hint) hint.style.opacity = '0';
+            if (allTimeText) allTimeText.classList.remove('visible');
+            if (rotationStopped && globe && typeof globe.startRotation === 'function') {
+                globe.autoRotateEnabled = true;
+                globe.startRotation();
+                rotationStopped = false;
+            }
         } else if (revealProgress < 0.5) {
             // Globe moves from expanded position to center
             const moveProgress = revealProgress / 0.5; // 0 to 1
@@ -1998,10 +2311,10 @@ function initGlobeMapReveal() {
             globeContainer.style.opacity = currentOpacity;
             globeContainer.style.zIndex = zIndex;
             
-            revealMapWrapper.style.opacity = '0';
-            revealMapWrapper.style.transform = 'scale(0.9)';
+            if (hint) hint.style.opacity = '0';
+            if (allTimeText) allTimeText.classList.remove('visible');
         } else {
-            // Globe is now centered - expand to full screen and fade out
+            // Globe is now centered - expand to full screen and stay interactive
             const fadeProgress = (revealProgress - 0.5) / 0.5; // 0 to 1
             const eased = easeOutCubic(fadeProgress);
             
@@ -2015,18 +2328,39 @@ function initGlobeMapReveal() {
             globeContainer.style.top = `${currentTop}px`;
             globeContainer.style.width = `${currentSize}px`;
             globeContainer.style.height = `${currentSize}px`;
-            globeContainer.style.opacity = 1 - eased; // Fade from 1 to 0
-            globeContainer.style.zIndex = '0';
+            globeContainer.style.opacity = '1';
+            globeContainer.style.zIndex = '100';
+
+            if (!rotationStopped && globe && typeof globe.stopRotation === 'function') {
+                globe.autoRotateEnabled = false;
+                globe.stopRotation();
+                rotationStopped = true;
+            }
             
-            revealMapWrapper.style.opacity = eased;
-            revealMapWrapper.style.transform = `scale(${0.9 + 0.1 * eased})`;
+            if (hint) hint.style.opacity = '1';
+            if (allTimeText) allTimeText.classList.add('visible');
             
-            // Invalidate map size once visible (Leaflet needs this)
-            if (map && eased > 0.5 && !revealMapWrapper.dataset.mapInvalidated) {
-                setTimeout(() => {
-                    map.invalidateSize();
-                    revealMapWrapper.dataset.mapInvalidated = 'true';
-                }, 100);
+            if (!clickHandlerAttached) {
+                clickHandlerAttached = true;
+                globeContainer.addEventListener('click', () => {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/4d4efc66-24e5-4d09-bf3f-b903a435067a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:2078',message:'globe click handler fired',data:{globeMapOpened,hasMapOverlay:!!mapOverlay},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+                    // #endregion agent log
+                    globeMapOpened = true;
+                    globeContainer.style.opacity = '0';
+                    if (hint) hint.style.opacity = '0';
+                    if (mapOverlay) {
+                        isMapOverlayOpen = true;
+                        mapOverlay.classList.remove('hidden');
+                    }
+                    if (!isMapInitialized) {
+                        initMap();
+                    }
+                    if (map) {
+                        renderMarkers();
+                        setTimeout(() => restoreMapView(), 100);
+                    }
+                }, { once: true });
             }
         }
     }

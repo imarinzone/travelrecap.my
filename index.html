@@ -842,6 +842,12 @@
             backdrop-filter: blur(22px) saturate(1.1);
             -webkit-backdrop-filter: blur(22px) saturate(1.1);
             max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .taskbar::-webkit-scrollbar {
+            display: none;
         }
 
         body.dark .taskbar {
@@ -969,6 +975,27 @@
             height: 100%;
             opacity: 0.8;
         }
+
+        /* All-time foreground text */
+        .all-time-foreground-text {
+            position: fixed;
+            left: 3rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: min(360px, 38vw);
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .all-time-foreground-text .interactive {
+            pointer-events: auto;
+        }
+
+        .all-time-foreground-text.visible {
+            opacity: 1;
+        }
         
         /* Timeline year button styles (modern pill) */
         .timeline-year-btn {
@@ -1086,6 +1113,15 @@
         /* Map specific overrides */
         #map {
             z-index: 10;
+        }
+
+        /* Keep map overlay clear of taskbar */
+        #map-overlay {
+            padding-bottom: 96px;
+        }
+
+        #map-overlay .map-overlay-card {
+            height: calc(100% - 96px);
         }
         
         /* ===== AESTHETIC MAP MARKERS ===== */
@@ -1780,7 +1816,7 @@
     </div>
 
     <!-- Top Control Bar (Taskbar Style) -->
-    <div id="top-control-bar" class="fixed bottom-4 left-0 right-0 z-50 transition-colors duration-300">
+    <div id="top-control-bar" class="fixed bottom-4 left-0 right-0 z-[300] transition-colors duration-300">
         <div class="taskbar-shell">
             <div class="taskbar">
                 <!-- Timeline Year Selector (Centered) -->
@@ -1806,6 +1842,17 @@
                         </button>
                         <span class="theme-switch-knob" aria-hidden="true"></span>
                     </div>
+                </div>
+
+                <span class="taskbar-divider hidden sm:inline"></span>
+
+                <!-- Share button -->
+                <div class="taskbar-section">
+                    <button id="taskbar-share"
+                        class="hidden inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/70 hover:bg-white text-gray-700 shadow-sm border border-white/60 transition-colors">
+                        <span class="material-icons-round text-sm">ios_share</span>
+                        <span class="text-xs font-semibold uppercase tracking-widest">Share</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -1858,6 +1905,10 @@
                         <span>Select File</span>
                     </div>
                 </div>
+                <button id="demo-button"
+                    class="mt-4 w-full rounded-xl px-6 py-3 font-semibold text-blue-600 bg-white/80 hover:bg-white border border-blue-100 shadow-sm transition-colors">
+                    Try a demo
+                </button>
                 <div id="upload-status" class="mt-4 text-sm font-medium text-gray-500 dark:text-gray-400 min-h-[20px]"></div>
             </div>
             <div class="mt-8 text-left glass rounded-3xl p-6 shadow-lg">
@@ -2011,8 +2062,7 @@
             <section class="glass rounded-3xl p-8 shadow-lg border border-white/50 dark:border-gray-700/50 relative overflow-hidden transition-colors duration-300 my-24 opacity-0 scroll-trigger"
                 id="travel-summary-card">
                 <div class="relative z-10 flex flex-col md:flex-row items-center gap-12">
-                    <div class="relative group cursor-pointer w-48 h-48 flex items-center justify-center rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-500/20 dark:to-purple-500/20"
-                        onclick="shareCard('travel-summary-card')">
+                    <div class="relative group cursor-pointer w-48 h-48 flex items-center justify-center rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-500/20 dark:to-purple-500/20">
                         <div id="summary-globe-container" class="absolute inset-0 opacity-70 pointer-events-none"></div>
                         <div class="absolute inset-0 flex flex-col items-center justify-center">
                             <span class="text-4xl font-black text-gray-900 dark:text-white drop-shadow-sm"
@@ -2027,45 +2077,71 @@
                         <p class="text-xl text-gray-600 dark:text-gray-300 leading-relaxed" id="travel-description">
                             Analysis pending...
                         </p>
-                        <button onclick="shareCard('travel-summary-card')"
-                            class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 mt-2">
-                            <span class="material-icons-round text-sm">ios_share</span> <span>Share Summary</span>
-                        </button>
                     </div>
                 </div>
             </section>
 
-            <!-- All Time Stats Footer (Typography-enhanced) -->
-            <section class="mt-16 bg-gray-900 rounded-3xl p-12 text-white shadow-2xl relative overflow-hidden opacity-0 scroll-trigger"
-                id="all-time-card">
+            <!-- All Time Stats Footer (Hidden; data source only) -->
+            <section class="hidden mt-16 bg-gray-900 rounded-3xl p-12 text-white shadow-2xl relative overflow-hidden opacity-0 scroll-trigger"
+                id="all-time-card" aria-hidden="true">
                 <div class="relative z-10 text-center">
                     <p class="text-sm text-gray-400 uppercase tracking-widest mb-4">All-Time</p>
                     <h2 class="text-4xl md:text-5xl font-bold mb-12">Lifetime Stats</h2>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 md:gap-16" id="all-time-stats">
                         <!-- Content populated by JS -->
                     </div>
-                    <button onclick="shareCard('all-time-card')"
-                        class="mt-12 px-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl backdrop-blur-sm transition-colors text-sm font-medium inline-flex items-center gap-2">
-                        <span class="material-icons-round text-sm">ios_share</span>
-                        <span>Share Lifetime Stats</span>
-                    </button>
                 </div>
             </section>
 
             <!-- Globe to Map Reveal Section -->
             <section id="globe-map-reveal" class="relative min-h-[120vh] mt-24">
-                <!-- Sticky container for the map reveal -->
-                <div class="sticky top-0 h-screen flex items-center justify-center overflow-hidden">
-                    <!-- Map Layer (fades in as globe fades out) -->
-                    <div id="reveal-map-wrapper" class="w-full max-w-4xl mx-4 opacity-0 scale-95 transition-all duration-300">
-                        <section class="glass dark:glass-dark rounded-3xl shadow-lg border border-white/50 dark:border-gray-700/50 overflow-hidden">
-                            <div id="map-container-wrapper" class="relative bg-gray-100 dark:bg-gray-800 w-full h-[500px] transition-colors duration-300">
-                                <div id="map" class="w-full h-full"></div>
-                            </div>
-                        </section>
+                <div class="sticky top-0 h-screen flex items-center justify-center overflow-hidden"></div>
+            </section>
+
+            <!-- All-time stats (foreground text only) -->
+            <div id="all-time-foreground-text" class="all-time-foreground-text text-gray-900 dark:text-white">
+                <p class="text-xs uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">All-time</p>
+                <h3 class="text-2xl font-bold mb-6">Lifetime Stats</h3>
+                <div class="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                    <div class="flex items-baseline gap-2">
+                        <span id="all-time-distance" class="text-lg font-semibold text-gray-900 dark:text-white">0 km</span>
+                        <span class="uppercase tracking-wide text-xs text-gray-500 dark:text-gray-400">Total Distance</span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span id="all-time-visits" class="text-lg font-semibold text-gray-900 dark:text-white">0</span>
+                        <span class="uppercase tracking-wide text-xs text-gray-500 dark:text-gray-400">Total Visits</span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span id="all-time-countries" class="text-lg font-semibold text-gray-900 dark:text-white">0</span>
+                        <span class="uppercase tracking-wide text-xs text-gray-500 dark:text-gray-400">Countries</span>
                     </div>
                 </div>
+                <div id="globe-map-hint" class="mt-6 text-sm text-gray-500 dark:text-gray-400 opacity-0 transition-opacity duration-300">
+                    Click the globe to open the map
+                </div>
+                <button id="restart-button" onclick="window.location.reload()"
+                    class="interactive hidden mt-6 inline-flex items-center gap-2 px-4 py-2 bg-white/60 dark:bg-gray-700/60 text-gray-800 dark:text-gray-200 rounded-xl font-medium hover:bg-white dark:hover:bg-gray-700 shadow-sm border border-white/70 dark:border-gray-600 transition-colors">
+                    <span class="material-icons-round text-sm">restart_alt</span>
+                    <span>Start again</span>
+                </button>
+            </div>
+
+            <!-- Map Overlay (opened on globe click) -->
+            <section id="map-overlay" class="hidden fixed inset-0 z-40 p-6 bg-black/40 backdrop-blur-sm">
+                <div class="w-full h-full flex items-center justify-center">
+                    <section class="map-overlay-card glass dark:glass-dark rounded-3xl shadow-lg border border-white/50 dark:border-gray-700/50 overflow-hidden w-full h-full max-w-6xl relative">
+                        <button id="map-overlay-close"
+                            class="absolute top-3 right-3 z-[2000] w-9 h-9 rounded-full text-gray-700 hover:text-gray-900 bg-white/80 hover:bg-white dark:bg-gray-900/90 dark:text-gray-100 dark:hover:bg-gray-900 shadow-sm transition-colors flex items-center justify-center border border-white/40 dark:border-white/10"
+                            title="Close map">
+                            <span class="material-icons-round text-base dark:text-black">close</span>
+                        </button>
+                        <div id="map-container-wrapper" class="relative bg-gray-100 dark:bg-gray-800 w-full h-full transition-colors duration-300">
+                            <div id="map" class="w-full h-full"></div>
+                        </div>
+                    </section>
+                </div>
             </section>
+
 
             <!-- Hidden containers for backward compatibility (JS still references these) -->
             <div id="statistics-grid" class="hidden"></div>
@@ -2080,15 +2156,39 @@
         </div>
 
         <footer class="mt-20 text-center text-gray-400 dark:text-gray-500 text-sm pb-10 space-y-4">
-            <button id="restart-button" onclick="window.location.reload()"
-                class="hidden inline-flex items-center gap-2 px-4 py-2 bg-white/60 dark:bg-gray-700/60 text-gray-800 dark:text-gray-200 rounded-xl font-medium hover:bg-white dark:hover:bg-gray-700 shadow-sm border border-white/70 dark:border-gray-600 transition-colors">
-                <span class="material-icons-round text-sm">restart_alt</span>
-                <span>Start again</span>
-            </button>
-            <p>Built in India with ❤️ love • Your data never leaves this browser • <a href="https://github.com/imarinzone" class="underline hover:text-gray-600 dark:hover:text-gray-300">https://github.com/imarinzone</a></p>
+            <p>Built in India with ❤️ by <a href="https://github.com/imarinzone" class="underline hover:text-gray-600 dark:hover:text-gray-300">@imarinzone</a></p>
         </footer>
 
     </div>
+
+    <!-- Share Dialog -->
+    <section id="share-dialog" class="hidden fixed inset-0 z-[400] bg-black/40 backdrop-blur-sm">
+        <div class="w-full h-full flex items-center justify-center p-6">
+            <div class="glass dark:glass-dark rounded-2xl p-6 shadow-lg border border-white/50 dark:border-gray-700/50 w-full max-w-sm">
+                <div class="flex items-start justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Share recap</h3>
+                    <button id="share-dialog-close"
+                        class="w-8 h-8 rounded-full text-gray-600 hover:text-gray-900 bg-white/80 hover:bg-white dark:bg-gray-900/90 dark:text-gray-100 dark:hover:bg-gray-900 shadow-sm transition-colors flex items-center justify-center border border-white/40 dark:border-white/10"
+                        title="Close">
+                        <span class="material-icons-round text-sm dark:text-black">close</span>
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-5">
+                    What would you like to include on the share image?
+                </p>
+                <div class="space-y-3">
+                    <button id="share-overall"
+                        class="w-full rounded-xl px-4 py-3 bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors">
+                        Overall details
+                    </button>
+                    <button id="share-year"
+                        class="w-full rounded-xl px-4 py-3 bg-white/90 text-gray-800 font-semibold hover:bg-white transition-colors border border-white/60">
+                        Current year details
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Scripts -->
     <script src="https://d3js.org/d3.v7.min.js"></script>

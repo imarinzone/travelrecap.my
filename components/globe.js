@@ -154,6 +154,7 @@ class Globe {
     }
 
     startRotation() {
+        if (this.autoRotateEnabled === false) return;
         if (this.rotationTimer) this.rotationTimer.stop();
 
         this.rotationTimer = d3.timer((elapsed) => {
@@ -203,6 +204,7 @@ class Globe {
                 globe.countries.attr("d", globe.path);
             })
             .on("end", () => {
+                if (globe.autoRotateEnabled === false) return;
                 const currentRotation = globe.projection.rotate()[0];
                 globe.rotationTimer = d3.timer((elapsed) => {
                     const scrollImpact = globe.scrollProgress * 720;
