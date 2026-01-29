@@ -1,3 +1,12 @@
+// Single fetch/cache for world GeoJSON so background and main globe share one load
+const WORLD_GEOJSON_URL = "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson";
+let worldGeoJSONPromise = null;
+function getWorldGeoJSON() {
+    if (!worldGeoJSONPromise) {
+        worldGeoJSONPromise = d3.json(WORLD_GEOJSON_URL);
+    }
+    return worldGeoJSONPromise;
+}
 
 class Globe {
     constructor(containerId, visitedCountries) {
@@ -85,10 +94,10 @@ class Globe {
             .attr("cy", this.height / 2)
             .attr("r", this.initialScale);
 
-        // Load world data
-        d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then((data) => {
+        // Use shared world GeoJSON cache (single fetch for background + main globe)
+        getWorldGeoJSON().then((data) => {
             const worldGroup = this.svg.append("g");
-            this.worldData = data; // Store for theme updates
+            this.worldData = data;
 
             this.countries = worldGroup.append("g")
                 .selectAll("path")
@@ -151,16 +160,16 @@ class Globe {
     startRotation() {
         if (this.autoRotateEnabled === false) return;
         if (this.rotationTimer) this.rotationTimer.stop();
-
+        let frameCount = 0;
         this.rotationTimer = d3.timer((elapsed) => {
             const rotate = this.projection.rotate();
-            // Constant slow rotation + extra rotation based on scroll speed
-            const scrollImpact = this.scrollProgress * 720; // 2 full extra turns across scroll
+            const scrollImpact = this.scrollProgress * 720;
             const baseRotation = elapsed * 0.05;
-
             this.projection.rotate([-baseRotation - scrollImpact, rotate[1]]);
-            this.countries.attr("d", this.path);
-
+            if (frameCount % 2 === 0) {
+                this.countries.attr("d", this.path);
+            }
+            frameCount++;
             this.updateContainerTransform();
         });
     }
@@ -187,6 +196,7 @@ class Globe {
     setupDrag() {
         const sensitivity = this.sensitivity;
         const globe = this;
+        let dragFrameCount = 0;
 
         this.svg.call(d3.drag()
             .on("start", () => {
@@ -196,16 +206,24 @@ class Globe {
                 const rotate = globe.projection.rotate();
                 const k = sensitivity / globe.projection.scale();
                 globe.projection.rotate([rotate[0] + event.dx * k, rotate[1] - event.dy * k]);
-                globe.countries.attr("d", globe.path);
+                dragFrameCount++;
+                if (dragFrameCount % 2 === 0) {
+                    globe.countries.attr("d", globe.path);
+                }
             })
             .on("end", () => {
+                globe.countries.attr("d", globe.path);
                 if (globe.autoRotateEnabled === false) return;
                 const currentRotation = globe.projection.rotate()[0];
+                let frameCount = 0;
                 globe.rotationTimer = d3.timer((elapsed) => {
                     const scrollImpact = globe.scrollProgress * 720;
                     const baseRotation = elapsed * 0.05;
                     globe.projection.rotate([currentRotation - baseRotation - scrollImpact, globe.projection.rotate()[1]]);
-                    globe.countries.attr("d", globe.path);
+                    frameCount++;
+                    if (frameCount % 2 === 0) {
+                        globe.countries.attr("d", globe.path);
+                    }
                     globe.updateContainerTransform();
                 });
             })

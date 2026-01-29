@@ -19,6 +19,9 @@
     "url": "https://github.com/imarinzone/travelrecap.my/issues"
   },
   "homepage": "https://github.com/imarinzone/travelrecap.my#readme",
+  "dependencies": {
+    "@vercel/speed-insights": "^1.0.0"
+  },
   "devDependencies": {
     "autoprefixer": "^10.4.23",
     "jest": "^30.2.0",

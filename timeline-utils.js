@@ -65,28 +65,71 @@
         return inside;
     }
 
+    // Compute bounding box [minLng, minLat, maxLng, maxLat] for GeoJSON geometry
+    function bboxFromGeometry(geom) {
+        if (!geom || !geom.coordinates) return null;
+        let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
+        function expand(coords) {
+            if (Array.isArray(coords[0]) && typeof coords[0][0] === 'number') {
+                coords.forEach(expand);
+            } else if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+                const lng = coords[0], lat = coords[1];
+                if (lng < minLng) minLng = lng;
+                if (lat < minLat) minLat = lat;
+                if (lng > maxLng) maxLng = lng;
+                if (lat > maxLat) maxLat = lat;
+            }
+        }
+        expand(geom.coordinates);
+        if (minLng === Infinity) return null;
+        return { minX: minLng, minY: minLat, maxX: maxLng, maxY: maxLat };
+    }
+
+    const rbushGlobal = typeof rbush !== 'undefined' ? rbush : (typeof self !== 'undefined' && self.rbush) ? self.rbush : null;
+
     class CountryLookup {
         constructor(geojson) {
             this.features = Array.isArray(geojson?.features) ? geojson.features : [];
+            this.index = null;
+            if (rbushGlobal && this.features.length > 0) {
+                const items = [];
+                for (const f of this.features) {
+                    const bbox = bboxFromGeometry(f.geometry);
+                    if (bbox) {
+                        items.push({ minX: bbox.minX, minY: bbox.minY, maxX: bbox.maxX, maxY: bbox.maxY, feature: f });
+                    }
+                }
+                this.index = rbushGlobal();
+                this.index.load(items);
+            }
         }
 
         getCountry(lat, lng) {
+            if (this.index) {
+                const candidates = this.index.search({ minX: lng, minY: lat, maxX: lng, maxY: lat });
+                for (const item of candidates) {
+                    const f = item.feature;
+                    const props = f.properties || {};
+                    const name = props.ADMIN || props.name || props.NAME || null;
+                    const geom = f.geometry;
+                    if (!geom || !geom.type || !geom.coordinates) continue;
+                    if (geom.type === 'Polygon') {
+                        if (geom.coordinates.some(ring => pointInPolygon(lat, lng, ring))) return name;
+                    } else if (geom.type === 'MultiPolygon') {
+                        if (geom.coordinates.some(poly => poly.some(ring => pointInPolygon(lat, lng, ring)))) return name;
+                    }
+                }
+                return null;
+            }
             for (const f of this.features) {
                 const props = f.properties || {};
                 const name = props.ADMIN || props.name || props.NAME || null;
                 const geom = f.geometry;
                 if (!geom || !geom.type || !geom.coordinates) continue;
-
                 if (geom.type === 'Polygon') {
-                    if (geom.coordinates.some(ring => pointInPolygon(lat, lng, ring))) {
-                        return name;
-                    }
+                    if (geom.coordinates.some(ring => pointInPolygon(lat, lng, ring))) return name;
                 } else if (geom.type === 'MultiPolygon') {
-                    if (geom.coordinates.some(poly =>
-                        poly.some(ring => pointInPolygon(lat, lng, ring))
-                    )) {
-                        return name;
-                    }
+                    if (geom.coordinates.some(poly => poly.some(ring => pointInPolygon(lat, lng, ring)))) return name;
                 }
             }
             return null;
@@ -206,10 +249,35 @@
                 }
             }
 
-            // iOS: timelinePath points (raw location trail)
+            // iOS: timelinePath points (raw location trail) – sampled to cap work and country lookups
+            const MAX_PATH_POINTS_PER_SEGMENT = 200;
+            const MIN_MINUTES_BETWEEN_SAMPLED_POINTS = 5;
             if (segment.timelinePath && Array.isArray(segment.timelinePath)) {
                 const segmentStart = segment.startTime ? new Date(segment.startTime).getTime() : 0;
-                segment.timelinePath.forEach(point => {
+                let pointsToProcess = segment.timelinePath;
+                if (segment.timelinePath.length > MAX_PATH_POINTS_PER_SEGMENT) {
+                    // Time-based sampling: prefer one point per MIN_MINUTES_BETWEEN_SAMPLED_POINTS, then cap at MAX_PATH_POINTS_PER_SEGMENT
+                    const withOffset = segment.timelinePath
+                        .map((p, i) => ({ point: p, offsetMin: parseInt(p.durationMinutesOffsetFromStartTime, 10) || 0, index: i }))
+                        .filter(p => !isNaN(p.offsetMin))
+                        .sort((a, b) => a.offsetMin - b.offsetMin);
+                    const sampled = [];
+                    let lastKeptOffset = -MIN_MINUTES_BETWEEN_SAMPLED_POINTS - 1;
+                    for (const { point, offsetMin } of withOffset) {
+                        if (offsetMin >= lastKeptOffset + MIN_MINUTES_BETWEEN_SAMPLED_POINTS && sampled.length < MAX_PATH_POINTS_PER_SEGMENT) {
+                            sampled.push(point);
+                            lastKeptOffset = offsetMin;
+                        }
+                    }
+                    // If still over cap (e.g. many points in same 5-min bucket), take every nth
+                    if (sampled.length > MAX_PATH_POINTS_PER_SEGMENT) {
+                        const step = Math.ceil(sampled.length / MAX_PATH_POINTS_PER_SEGMENT);
+                        pointsToProcess = sampled.filter((_, i) => i % step === 0).slice(0, MAX_PATH_POINTS_PER_SEGMENT);
+                    } else {
+                        pointsToProcess = sampled;
+                    }
+                }
+                pointsToProcess.forEach(point => {
                     const pointStr = point.point || point;
                     const parsed = parseLatLngString(typeof pointStr === 'string' ? pointStr : null);
                     if (parsed) {

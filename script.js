@@ -32,6 +32,9 @@ const tileLayers = {
     })
 };
 
+// Cached country GeoJSON for passing to Worker (offline country lookup there)
+let countryGeoJSONCache = null;
+
 // Load country boundaries GeoJSON for offline country lookup
 async function loadCountryGeoJSON() {
     if (!window.timelineUtils || typeof timelineUtils.setCountryGeoJSON !== 'function') {
@@ -45,11 +48,19 @@ async function loadCountryGeoJSON() {
             return;
         }
         const geojson = await response.json();
+        countryGeoJSONCache = geojson;
         timelineUtils.setCountryGeoJSON(geojson);
     } catch (error) {
         timelineUtils.Logger.warn('Error loading countries.geojson for offline geocoding', error);
     }
 }
+
+// Use clustering when location count exceeds this (avoids 5k–50k DOM nodes)
+const MARKER_CLUSTER_THRESHOLD = 500;
+// Batch size for adding markers per frame (keeps UI responsive)
+const MARKER_BATCH_SIZE = 200;
+// Optional cap for visible markers; show "Showing first N" when capped
+const MAX_VISIBLE_MARKERS = 2000;
 
 // Initialize map
 function initMap() {
@@ -84,8 +95,9 @@ function initMap() {
     updateStyleButtons();
     updateMapTheme();
 
-    // Initialize marker layer (using LayerGroup instead of clustering to show individual points)
+    // Start with LayerGroup; renderMarkers() will switch to MarkerClusterGroup when count > threshold
     markers = L.layerGroup();
+    markers._useClustering = false;
     map.addLayer(markers);
 
     // Initialize year timeline if data already loaded
@@ -365,33 +377,61 @@ function handleFileUpload(event) {
 
     const reader = new FileReader();
     reader.onload = function (e) {
-        // Show a full-screen loading overlay before heavy parsing/processing
         showLoadingScreen('Crunching your timeline data. This may take a minute for large files…');
+        const jsonText = e.target.result;
 
-        // Defer heavy work to the next tick so the browser can paint the overlay
-        setTimeout(() => {
+        function done() {
+            statusSpan.className = 'text-sm font-medium text-green-600';
+            statusSpan.textContent = 'Done!';
+            timelineUtils.Logger.info('Loaded data successfully');
+            hideLoadingScreen();
+        }
+        function fail(err) {
+            timelineUtils.Logger.error('Error parsing JSON:', err);
+            statusSpan.innerHTML = `<span class="block">Error: ${err.message}</span>`;
+            statusSpan.className = 'text-sm font-medium text-red-600 max-w-md';
+            hideLoadingScreen();
+        }
+        function runSync() {
             try {
-                const json = JSON.parse(e.target.result);
-                
-                // Validate: Android/Web has { semanticSegments }; iOS Google Maps export is root-level array
+                const json = JSON.parse(jsonText);
                 const segments = timelineUtils.getSegmentsFromData(json);
                 if (!segments.length) {
                     const hint = Array.isArray(json) ? ' (root array was empty)' : ` (expected 'semanticSegments' or root array; got keys: ${Object.keys(json).slice(0, 5).join(', ')})`;
                     throw new Error(`Invalid JSON structure. No timeline segments found${hint}`);
                 }
-                
                 processAndRenderData(json);
-                timelineUtils.Logger.info('Loaded data successfully');
-                statusSpan.className = 'text-sm font-medium text-green-600';
-                statusSpan.textContent = 'Done!';
+                done();
             } catch (error) {
-                timelineUtils.Logger.error('Error parsing JSON:', error);
-                // Show detailed error message
-                statusSpan.innerHTML = `<span class="block">Error: ${error.message}</span>`;
-                statusSpan.className = 'text-sm font-medium text-red-600 max-w-md';
-            } finally {
-                hideLoadingScreen();
+                fail(error);
             }
+        }
+
+        setTimeout(() => {
+            requestAnimationFrame(() => {
+                if (typeof Worker === 'undefined') {
+                    runSync();
+                    return;
+                }
+                try {
+                    const worker = new Worker('timeline-worker.js');
+                    worker.onmessage = function (event) {
+                        const data = event.data;
+                        if (data.error) {
+                            fail(new Error(data.error));
+                            return;
+                        }
+                        applyProcessedDataFromWorker(data);
+                        done();
+                    };
+                    worker.onerror = function () {
+                        runSync();
+                    };
+                    worker.postMessage({ jsonText, countryGeoJSON: countryGeoJSONCache || null });
+                } catch (err) {
+                    runSync();
+                }
+            });
         }, 50);
     };
     // Let the user know we started processing
@@ -506,10 +546,57 @@ function loadDemoData() {
     }, 50);
 }
 
-// Process Google Timeline JSON & Update UI
+// Apply Worker result (allSegments, allLocations, years, initialStats) and update UI – same as processAndRenderData but without parse/process
+function applyProcessedDataFromWorker(payload) {
+    const { allSegments: segs, allLocations: locs, years, initialStats } = payload;
+    allSegments = segs;
+    allLocations = locs;
+    mapYears = [...years];
+    isDataLoaded = true;
+
+    timelineUtils.Logger.info(`Parsed ${allLocations.length} locations`);
+
+    const visitedCountries = Array.isArray(initialStats.countries) ? initialStats.countries : [];
+    hideBackgroundGlobe();
+
+    const globeContainer = document.getElementById('globe-container');
+    if (globeContainer) {
+        globeContainer.innerHTML = '';
+        window.visitedCountriesArray = visitedCountries;
+        globe = new Globe('globe-container', visitedCountries);
+        globeContainer.classList.remove('opacity-0');
+        globeContainer.classList.add('opacity-50');
+    }
+
+    initializeYearFilter(years);
+    if (years.length > 0) {
+        const sortedYears = [...years].sort((a, b) => a - b);
+        selectedYear = sortedYears[sortedYears.length - 1].toString();
+        localStorage.setItem('mapYear', selectedYear);
+        updateTimelineSelection();
+        document.getElementById('header-title').textContent = `Your ${selectedYear} Recap`;
+        const headerDesc = document.getElementById('header-description');
+        if (headerDesc) headerDesc.classList.add('hidden');
+    }
+
+    renderDashboard();
+
+    const uploadSection = document.getElementById('upload-section');
+    if (uploadSection) uploadSection.classList.add('hidden');
+    const shareButton = document.getElementById('taskbar-share');
+    if (shareButton) shareButton.classList.remove('hidden');
+    const restartButton = document.getElementById('restart-button');
+    if (restartButton) restartButton.classList.remove('hidden');
+
+    const dashboard = document.getElementById('dashboard-content');
+    if (dashboard && typeof dashboard.scrollIntoView === 'function') {
+        dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+// Process Google Timeline JSON & Update UI (main-thread fallback when Worker unavailable)
 function processAndRenderData(json) {
     timelineUtils.Logger.time('Data Processing');
-    // Use the utility to process raw JSON
     const processed = timelineUtils.processTimelineData(json);
 
     allSegments = processed.allSegments;
@@ -521,66 +608,39 @@ function processAndRenderData(json) {
     timelineUtils.Logger.info(`Parsed ${allLocations.length} locations`);
     timelineUtils.Logger.timeEnd('Data Processing');
 
-    // Calculate initial stats to get countries for the globe
     const initialStats = timelineUtils.calculateStats(allSegments);
 
-    // Hide background globe and show main globe with visited countries
     hideBackgroundGlobe();
-    
-    // Initialize or update Globe
     const globeContainer = document.getElementById('globe-container');
     if (globeContainer) {
-        globeContainer.innerHTML = ''; // Clear previous globe
+        globeContainer.innerHTML = '';
         const visitedCountries = Array.from(initialStats.countries);
-        
-        // Store globally for reveal globe to use
         window.visitedCountriesArray = visitedCountries;
-        
         globe = new Globe('globe-container', visitedCountries);
-
-        // Fade in
         globeContainer.classList.remove('opacity-0');
         globeContainer.classList.add('opacity-50');
     }
 
-    // Initialize UI with data
     initializeYearFilter(years);
-
-    // Auto-select the latest year (last in ascending sorted list)
     if (years.length > 0) {
         const sortedYears = [...years].sort((a, b) => a - b);
-        selectedYear = sortedYears[sortedYears.length - 1].toString(); // Latest year
+        selectedYear = sortedYears[sortedYears.length - 1].toString();
         localStorage.setItem('mapYear', selectedYear);
         updateTimelineSelection();
-        
-        // Update header title
         document.getElementById('header-title').textContent = `Your ${selectedYear} Recap`;
-        
-        // Hide description after data loads
         const headerDesc = document.getElementById('header-description');
         if (headerDesc) headerDesc.classList.add('hidden');
     }
 
     renderDashboard();
 
-    // Hide initial upload section once data is successfully parsed and rendered
     const uploadSection = document.getElementById('upload-section');
-    if (uploadSection) {
-        uploadSection.classList.add('hidden');
-    }
-
+    if (uploadSection) uploadSection.classList.add('hidden');
     const shareButton = document.getElementById('taskbar-share');
-    if (shareButton) {
-        shareButton.classList.remove('hidden');
-    }
-
-    // Reveal "Upload a new file" action in the footer
+    if (shareButton) shareButton.classList.remove('hidden');
     const restartButton = document.getElementById('restart-button');
-    if (restartButton) {
-        restartButton.classList.remove('hidden');
-    }
+    if (restartButton) restartButton.classList.remove('hidden');
 
-    // Smooth-scroll to the dashboard area
     const dashboard = document.getElementById('dashboard-content');
     if (dashboard && typeof dashboard.scrollIntoView === 'function') {
         dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1870,13 +1930,33 @@ function renderAllTimeStats(stats) {
     if (countriesEl) countriesEl.textContent = statsData[2].value;
 }
 
-// Helper: Render map markers (from previous implementation, slightly adjusted)
-function renderMarkers() {
-    if (!map || !markers) return;
-    // Clear existing markers
-    markers.clearLayers();
+// Helper: Ensure markers layer is cluster group or plain layer based on count
+function ensureMarkerLayerType(useClustering) {
+    const isCluster = markers && markers._useClustering === true;
+    if (useClustering === isCluster) return;
+    if (!map) return;
+    map.removeLayer(markers);
+    if (useClustering && typeof L.markerClusterGroup === 'function') {
+        markers = L.markerClusterGroup({ maxClusterRadius: 50 });
+        markers._useClustering = true;
+    } else {
+        markers = L.layerGroup();
+        markers._useClustering = false;
+    }
+    map.addLayer(markers);
+}
+
+// Helper: Render map markers (from previous implementation, slightly adjusted).
+// Optional onDone() is called when all markers are added (used to hide loading overlay).
+function renderMarkers(onDone) {
+    if (!map || !markers) {
+        if (typeof onDone === 'function') onDone();
+        return;
+    }
 
     if (allLocations.length === 0) {
+        markers.clearLayers();
+        if (typeof onDone === 'function') onDone();
         return;
     }
 
@@ -1894,8 +1974,14 @@ function renderMarkers() {
 
     if (filteredLocations.length === 0) {
         timelineUtils.Logger.warn('No locations found for selected year');
+        markers.clearLayers();
+        if (typeof onDone === 'function') onDone();
         return;
     }
+
+    const useClustering = filteredLocations.length > MARKER_CLUSTER_THRESHOLD;
+    ensureMarkerLayerType(useClustering);
+    markers.clearLayers();
 
     // Calculate bounds
     const bounds = L.latLngBounds([]);
@@ -1914,10 +2000,24 @@ function renderMarkers() {
     }
     lastMapView = { center: map.getCenter(), zoom: map.getZoom() };
 
-    // Add markers as individual points with aesthetic styling
-    filteredLocations.forEach(loc => {
+    // Cap visible markers and optionally show "Showing first N" message
+    const totalCount = filteredLocations.length;
+    const locationsToAdd = totalCount > MAX_VISIBLE_MARKERS
+        ? filteredLocations.slice(0, MAX_VISIBLE_MARKERS)
+        : filteredLocations;
+    const capMessageEl = document.getElementById('map-markers-cap-message');
+    if (capMessageEl) {
+        if (totalCount > MAX_VISIBLE_MARKERS) {
+            capMessageEl.textContent = `Showing first ${MAX_VISIBLE_MARKERS} of ${totalCount} locations`;
+            capMessageEl.classList.remove('hidden');
+        } else {
+            capMessageEl.classList.add('hidden');
+            capMessageEl.textContent = '';
+        }
+    }
+
+    function addOneMarker(loc) {
         const popupContent = buildPopupContent(loc);
-        // Create a custom aesthetic marker
         const pointIcon = L.divIcon({
             className: 'custom-point-marker',
             html: `<div class="map-marker-dot">
@@ -1927,12 +2027,32 @@ function renderMarkers() {
             iconSize: [16, 16],
             iconAnchor: [8, 8]
         });
-        const marker = L.marker([loc.lat, loc.lng], { icon: pointIcon })
-            .bindPopup(popupContent);
+        const marker = L.marker([loc.lat, loc.lng], { icon: pointIcon }).bindPopup(popupContent);
         markers.addLayer(marker);
-    });
+    }
 
-    timelineUtils.Logger.info(`Rendered ${filteredLocations.length} markers`);
+    if (locationsToAdd.length <= MARKER_BATCH_SIZE) {
+        locationsToAdd.forEach(addOneMarker);
+        timelineUtils.Logger.info(`Rendered ${locationsToAdd.length} markers`);
+        if (typeof onDone === 'function') onDone();
+        return;
+    }
+
+    // Batched add so main thread can process events and overlay can update
+    let index = 0;
+    function addNextBatch() {
+        const end = Math.min(index + MARKER_BATCH_SIZE, locationsToAdd.length);
+        for (; index < end; index++) {
+            addOneMarker(locationsToAdd[index]);
+        }
+        if (index >= locationsToAdd.length) {
+            timelineUtils.Logger.info(`Rendered ${locationsToAdd.length} markers (batched)`);
+            if (typeof onDone === 'function') onDone();
+            return;
+        }
+        requestAnimationFrame(addNextBatch);
+    }
+    addNextBatch();
 }
 
 function restoreMapView() {
@@ -2007,8 +2127,12 @@ function onYearFilterChange(event) {
         selectedYear = event.target.value === '' ? null : event.target.value;
         localStorage.setItem('mapYear', event.target.value);
     }
-    
-    renderDashboard();
+
+    showLoadingScreen(selectedYear ? `Loading ${selectedYear}…` : 'Loading all years…');
+    setTimeout(() => {
+        renderDashboard();
+        hideLoadingScreen();
+    }, 0);
 }
 
 // Toggle fullscreen
@@ -2018,9 +2142,6 @@ function toggleFullscreen() {
 
     // Prefer overlay-based "fullscreen" so taskbar stays visible
     if (mapOverlay) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/4d4efc66-24e5-4d09-bf3f-b903a435067a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1634',message:'toggleFullscreen overlay branch',data:{overlayHidden:mapOverlay.classList.contains('hidden')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
-        // #endregion agent log
         const isOpen = !mapOverlay.classList.contains('hidden');
         if (isOpen) {
             mapOverlay.classList.add('hidden');
@@ -2404,10 +2525,6 @@ function initGlobeMapReveal() {
         // Size that covers the whole screen (slightly oversized to fill edges)
         const fullScreenSize = Math.min(Math.max(viewportWidth, viewportHeight) * 1.15, maxZoomSize);
 
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/4d4efc66-24e5-4d09-bf3f-b903a435067a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1953',message:'reveal progress state',data:{revealProgress,globeMapOpened,clickHandlerAttached,hasMapOverlay:!!mapOverlay},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-        // #endregion agent log
-
         if (globeMapOpened || isMapOverlayOpen) {
             globeContainer.style.opacity = '0';
             globeContainer.style.zIndex = '0';
@@ -2500,9 +2617,6 @@ function initGlobeMapReveal() {
             if (!clickHandlerAttached) {
                 clickHandlerAttached = true;
                 globeContainer.addEventListener('click', () => {
-                    // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/4d4efc66-24e5-4d09-bf3f-b903a435067a',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:2078',message:'globe click handler fired',data:{globeMapOpened,hasMapOverlay:!!mapOverlay},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-                    // #endregion agent log
                     globeMapOpened = true;
                     globeContainer.style.opacity = '0';
                     if (hint) hint.style.opacity = '0';
@@ -2511,13 +2625,20 @@ function initGlobeMapReveal() {
                         isMapOverlayOpen = true;
                         mapOverlay.classList.remove('hidden');
                     }
-                    if (!isMapInitialized) {
-                        initMap();
-                    }
-                    if (map) {
-                        renderMarkers();
-                        setTimeout(() => restoreMapView(), 100);
-                    }
+                    showLoadingScreen('Loading map…');
+                    requestAnimationFrame(() => {
+                        if (!isMapInitialized) {
+                            initMap();
+                        }
+                        if (map) {
+                            renderMarkers(() => {
+                                restoreMapView();
+                                hideLoadingScreen();
+                            });
+                        } else {
+                            hideLoadingScreen();
+                        }
+                    });
                 }, { once: true });
             }
         }

@@ -2194,6 +2194,7 @@
                         </button>
                         <div id="map-container-wrapper" class="relative bg-gray-100 dark:bg-gray-800 w-full h-full transition-colors duration-300">
                             <div id="map" class="w-full h-full"></div>
+                            <div id="map-markers-cap-message" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-[1000] px-3 py-1.5 rounded-lg bg-black/70 text-white text-xs" aria-live="polite"></div>
                         </div>
                     </section>
                 </div>
@@ -2243,10 +2244,17 @@
         </div>
     </section>
 
+    <!-- Vercel Speed Insights (static site – script runs when deployed on Vercel) -->
+    <script>
+      window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/speed-insights/script.js"></script>
+
     <!-- Scripts -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/rbush@3.0.1/rbush.min.js"></script>
     <script src="timeline-utils.js"></script>
     <script src="components/globe.js"></script>
     <script src="script.js"></script>
