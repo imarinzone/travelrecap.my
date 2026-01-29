@@ -116,9 +116,15 @@
         return countryLookupInstance.getCountry(lat, lng);
     }
 
+    /**
+     * Parse lat/lng from string. Supports:
+     * - Android/Web: "12.9716°, 77.5946°" or "12.9716, 77.5946"
+     * - iOS: "geo:12.952684,77.693002"
+     */
     function parseLatLngString(latLngStr) {
-        if (!latLngStr) return null;
-        const parts = latLngStr.replace(/°/g, '').split(',');
+        if (!latLngStr || typeof latLngStr !== 'string') return null;
+        const normalized = latLngStr.replace(/^geo:/i, '').replace(/°/g, '').trim();
+        const parts = normalized.split(',');
         if (parts.length !== 2) return null;
         const lat = parseFloat(parts[0].trim());
         const lng = parseFloat(parts[1].trim());
@@ -126,9 +132,36 @@
         return { lat, lng };
     }
 
-    // Process Google Timeline JSON
+    /**
+     * Get segments array from either Android/Web format ({ semanticSegments }) or iOS format (root array).
+     */
+    function getSegmentsFromData(data) {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        return Array.isArray(data.semanticSegments) ? data.semanticSegments : [];
+    }
+
+    /**
+     * Normalize activity type for stats/eco: iOS uses "in bus", "walking" etc.; Android uses "IN_BUS", "WALKING".
+     */
+    function normalizeActivityType(type) {
+        if (!type || typeof type !== 'string') return 'UNKNOWN';
+        const upper = type.toUpperCase().replace(/\s+/g, '_');
+        return upper || 'UNKNOWN';
+    }
+
+    /**
+     * Get lat/lng string from placeLocation: Android has placeLocation.latLng, iOS has placeLocation as "geo:lat,lng".
+     */
+    function getPlaceLatLngStr(placeLocation) {
+        if (!placeLocation) return null;
+        if (typeof placeLocation === 'string') return placeLocation;
+        return placeLocation.latLng || null;
+    }
+
+    // Process Google Timeline JSON (Android/Web semanticSegments or iOS root array)
     function processTimelineData(data) {
-        const allSegments = data.semanticSegments || [];
+        const allSegments = getSegmentsFromData(data);
         const allLocations = [];
         const years = new Set();
 
@@ -140,11 +173,12 @@
                 years.add(year);
             }
 
-            // Collect Locations for Map
+            // Collect Locations for Map: visits (Android + iOS)
             if (segment.visit) {
                 const visit = segment.visit;
-                const placeLocation = visit.topCandidate && visit.topCandidate.placeLocation;
-                const latLngStr = placeLocation && placeLocation.latLng;
+                const topCandidate = visit.topCandidate;
+                const placeLocation = topCandidate && topCandidate.placeLocation;
+                const latLngStr = getPlaceLatLngStr(placeLocation);
                 const parsed = parseLatLngString(latLngStr);
 
                 if (parsed) {
@@ -153,21 +187,46 @@
                     // Offline country lookup (if GeoJSON configured)
                     const country = getCountryFromLatLng(lat, lng);
                     if (country) {
-                        // Attach to segment for later stats aggregation
                         segment.country = country;
                     }
 
+                    const placeId = topCandidate && (topCandidate.placeId || topCandidate.placeID);
+                    const name = (placeLocation && typeof placeLocation === 'object' && placeLocation.name) || null;
+
                     allLocations.push({
-                        lat: lat,
-                        lng: lng,
+                        lat,
+                        lng,
                         startTime: segment.startTime,
                         endTime: segment.endTime,
-                        name: placeLocation && placeLocation.name,
+                        name,
                         probability: visit.probability,
-                        placeId: visit.topCandidate.placeId,
+                        placeId: placeId || null,
                         country: country || null
                     });
                 }
+            }
+
+            // iOS: timelinePath points (raw location trail)
+            if (segment.timelinePath && Array.isArray(segment.timelinePath)) {
+                const segmentStart = segment.startTime ? new Date(segment.startTime).getTime() : 0;
+                segment.timelinePath.forEach(point => {
+                    const pointStr = point.point || point;
+                    const parsed = parseLatLngString(typeof pointStr === 'string' ? pointStr : null);
+                    if (parsed) {
+                        const offsetMin = parseInt(point.durationMinutesOffsetFromStartTime, 10) || 0;
+                        const pointTime = new Date(segmentStart + offsetMin * 60 * 1000).toISOString();
+                        allLocations.push({
+                            lat: parsed.lat,
+                            lng: parsed.lng,
+                            startTime: pointTime,
+                            endTime: pointTime,
+                            name: null,
+                            probability: null,
+                            placeId: null,
+                            country: getCountryFromLatLng(parsed.lat, parsed.lng) || null
+                        });
+                    }
+                });
             }
         });
 
@@ -190,46 +249,47 @@
         };
 
         segments.forEach(segment => {
-            // Activity Stats
+            // Activity Stats (iOS may send distanceMeters as string)
             if (segment.activity) {
                 const activity = segment.activity;
-                if (activity.distanceMeters) {
-                    stats.totalDistanceMeters += activity.distanceMeters;
+                const distanceMeters = Number(activity.distanceMeters) || 0;
+                if (distanceMeters) {
+                    stats.totalDistanceMeters += distanceMeters;
                 }
 
                 if (activity.topCandidate && activity.topCandidate.type) {
-                    const type = activity.topCandidate.type;
+                    const rawType = activity.topCandidate.type;
+                    const type = normalizeActivityType(rawType);
                     if (!stats.transport[type]) {
                         stats.transport[type] = { count: 0, distanceMeters: 0, durationMs: 0 };
                     }
                     stats.transport[type].count++;
-                    if (activity.distanceMeters) stats.transport[type].distanceMeters += activity.distanceMeters;
+                    if (distanceMeters) stats.transport[type].distanceMeters += distanceMeters;
 
                     const duration = new Date(segment.endTime) - new Date(segment.startTime);
                     stats.transport[type].durationMs += duration;
                 }
             }
 
-            // Visit Stats
+            // Visit Stats (Android: placeLocation object with latLng/name; iOS: placeLocation string "geo:lat,lng", placeID)
             if (segment.visit) {
                 stats.totalVisits++;
                 const visit = segment.visit;
 
                 if (visit.topCandidate) {
                     const placeLocation = visit.topCandidate.placeLocation || {};
-                    const placeId = visit.topCandidate.placeId;
-                    const name = placeLocation.name || "Unknown Place";
+                    const placeId = visit.topCandidate.placeId || visit.topCandidate.placeID;
+                    const latLngStr = getPlaceLatLngStr(placeLocation);
+                    const name = (typeof placeLocation === 'object' && placeLocation.name) ? placeLocation.name : "Unknown Place";
                     let country = segment.country || null;
 
-                    // If we don't already have a country on the segment, try offline lookup from lat/lng
-                    if (!country && placeLocation.latLng) {
-                        const parsed = parseLatLngString(placeLocation.latLng);
+                    if (!country && latLngStr) {
+                        const parsed = parseLatLngString(latLngStr);
                         if (parsed) {
                             country = getCountryFromLatLng(parsed.lat, parsed.lng);
                         }
                     }
 
-                    // Track Unique Countries
                     if (country) {
                         stats.countries.add(country);
                     }
@@ -238,7 +298,7 @@
                         stats.visits[placeId] = {
                             name: name,
                             count: 0,
-                            latLng: placeLocation.latLng,
+                            latLng: latLngStr,
                             country: country || null
                         };
                     }
@@ -279,23 +339,23 @@
             if (segment.activity) {
                 stats.time.moving += duration;
 
-                const type = segment.activity.topCandidate?.type || 'UNKNOWN';
-                const distanceKm = (segment.activity.distanceMeters || 0) / 1000;
+                const rawType = segment.activity.topCandidate?.type || 'UNKNOWN';
+                const type = normalizeActivityType(rawType);
+                const distanceMeters = Number(segment.activity.distanceMeters) || 0;
+                const distanceKm = distanceMeters / 1000;
                 stats.eco.distanceByType[type] = (stats.eco.distanceByType[type] || 0) + distanceKm;
 
-                // Eco Calc
                 const factor = emissionFactors[type] || 0;
                 const co2 = distanceKm * factor;
                 stats.eco.totalCo2 += co2;
                 stats.eco.breakdown[type] = (stats.eco.breakdown[type] || 0) + co2;
 
-                // Records
-                if (segment.activity.distanceMeters) {
-                    if ((type === 'IN_PASSENGER_VEHICLE' || type === 'IN_VEHICLE') && segment.activity.distanceMeters > stats.records.longestDrive) {
-                        stats.records.longestDrive = segment.activity.distanceMeters;
+                if (distanceMeters) {
+                    if ((type === 'IN_PASSENGER_VEHICLE' || type === 'IN_VEHICLE') && distanceMeters > stats.records.longestDrive) {
+                        stats.records.longestDrive = distanceMeters;
                     }
-                    if ((type === 'WALKING' || type === 'RUNNING') && segment.activity.distanceMeters > stats.records.longestWalk) {
-                        stats.records.longestWalk = segment.activity.distanceMeters;
+                    if ((type === 'WALKING' || type === 'RUNNING') && distanceMeters > stats.records.longestWalk) {
+                        stats.records.longestWalk = distanceMeters;
                     }
                 }
             }
@@ -311,6 +371,7 @@
     exports.calculateStats = calculateStats;
     exports.calculateAdvancedStats = calculateAdvancedStats;
     exports.setCountryGeoJSON = setCountryGeoJSON;
+    exports.getSegmentsFromData = getSegmentsFromData;
     exports.Logger = Logger;
 
 })(typeof exports === 'undefined' ? (this.timelineUtils = {}) : exports);

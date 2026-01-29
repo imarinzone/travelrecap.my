@@ -44,7 +44,7 @@ class Globe {
     }
 
     getCurrentTheme() {
-        return document.body.classList.contains('dark') ? 'dark' : 'light';
+        return document.body.getAttribute('data-globe-map-style') || 'dark';
     }
 
     init() {
@@ -113,16 +113,11 @@ class Globe {
     }
     
     setupThemeListener() {
-        // Listen for theme changes via MutationObserver on body class
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.attributeName === 'class') {
-                    this.updateTheme();
-                }
-            });
+        // Listen for globe/map style changes via data-globe-map-style on body
+        const observer = new MutationObserver(() => {
+            this.updateTheme();
         });
-        
-        observer.observe(document.body, { attributes: true });
+        observer.observe(document.body, { attributes: true, attributeFilter: ['class', 'data-globe-map-style'] });
     }
     
     updateTheme() {

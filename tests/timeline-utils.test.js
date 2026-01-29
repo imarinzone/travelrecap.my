@@ -122,6 +122,41 @@ describe('Timeline Utilities', () => {
             expect(processed.allLocations.length).toBeGreaterThan(0);
             expect(processed.allLocations[0].lat).toBe(10.5);
         });
+
+        test('should parse iOS format (root array, geo:lat,lng, placeID)', () => {
+            const iosData = [
+                {
+                    startTime: '2026-01-29T08:25:47.861+05:30',
+                    endTime: '2026-01-29T09:34:01.271+05:30',
+                    visit: {
+                        probability: '0.936220',
+                        topCandidate: {
+                            placeID: 'ChIJK0XLDMkTrjsRrKyP5_f_8fo',
+                            placeLocation: 'geo:12.952684,77.693002'
+                        }
+                    }
+                },
+                {
+                    startTime: '2026-01-29T09:34:01.271+05:30',
+                    endTime: '2026-01-29T16:13:21.751+05:30',
+                    activity: {
+                        distanceMeters: '8454.921875',
+                        topCandidate: { type: 'in bus' }
+                    }
+                }
+            ];
+            const processed = timelineUtils.processTimelineData(iosData);
+            expect(processed.allSegments.length).toBe(2);
+            expect(processed.allLocations.length).toBeGreaterThan(0);
+            expect(processed.allLocations[0].lat).toBeCloseTo(12.952684);
+            expect(processed.allLocations[0].lng).toBeCloseTo(77.693002);
+            expect(processed.allLocations[0].placeId).toBe('ChIJK0XLDMkTrjsRrKyP5_f_8fo');
+            const stats = timelineUtils.calculateStats(processed.allSegments);
+            expect(stats.totalVisits).toBe(1);
+            expect(stats.totalDistanceMeters).toBeCloseTo(8454.921875);
+            expect(stats.transport['IN_BUS']).toBeDefined();
+            expect(stats.transport['IN_BUS'].distanceMeters).toBeCloseTo(8454.921875);
+        });
     });
 
 });

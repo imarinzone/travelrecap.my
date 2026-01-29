@@ -739,8 +739,9 @@
     <style>
         body {
             font-family: 'Outfit', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
             min-height: 100vh;
+            color: #1e293b;
             transition: background 0.3s ease, color 0.3s ease;
         }
 
@@ -954,6 +955,10 @@
             color: #f8fafc;
         }
 
+        #theme-light.active {
+            color: #facc15 !important;
+        }
+
         .theme-switch-knob {
             position: absolute;
             top: 4px;
@@ -961,15 +966,17 @@
             width: 36px;
             height: 28px;
             border-radius: 999px;
-            background: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.15);
+            background: rgba(30, 41, 59, 0.9);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
             transition: transform 0.25s ease, background 0.25s ease;
             z-index: 1;
         }
 
-        body.dark .theme-switch-knob {
-            background: rgba(30, 41, 59, 0.9);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+        /* Knob position by active button (light = left, dark = right) */
+        .theme-switch:has(#theme-light.active) .theme-switch-knob {
+            transform: translateX(0);
+        }
+        .theme-switch:has(#theme-dark.active) .theme-switch-knob {
             transform: translateX(40px);
         }
 
@@ -1018,12 +1025,13 @@
         }
         
         .timeline-year-btn.active {
-            color: #ffffff;
+            color: #1e293b;
             background: transparent;
             box-shadow: none;
         }
 
         body.dark .timeline-year-btn.active {
+            color: #ffffff;
             background: transparent;
             box-shadow: none;
         }
@@ -1057,9 +1065,14 @@
         
         .timeline-year-point.active,
         .timeline-all-years.active {
-            color: #ffffff;
+            color: #1e293b;
             background: transparent;
             box-shadow: none;
+        }
+
+        body.dark .timeline-year-point.active,
+        body.dark .timeline-all-years.active {
+            color: #ffffff;
         }
 
         .glow-blue-btn {
@@ -1836,10 +1849,10 @@
                 <!-- Theme Toggle -->
                 <div class="taskbar-section">
                     <div class="theme-switch" id="theme-switch" role="tablist" aria-label="Theme toggle">
-                        <button id="theme-light" class="theme-switch-btn" title="Light Mode" aria-pressed="true">
+                        <button id="theme-light" class="theme-switch-btn" title="Light globe & map" aria-pressed="false">
                             <span class="material-icons-round text-base">light_mode</span>
                         </button>
-                        <button id="theme-dark" class="theme-switch-btn" title="Dark Mode" aria-pressed="false">
+                        <button id="theme-dark" class="theme-switch-btn active" title="Dark globe & map" aria-pressed="true">
                             <span class="material-icons-round text-base">dark_mode</span>
                         </button>
                         <span class="theme-switch-knob" aria-hidden="true"></span>

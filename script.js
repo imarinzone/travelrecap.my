@@ -212,26 +212,29 @@ function updateTimelineSelection() {
 
 // ===== GLOBAL THEME SYSTEM =====
 
-let currentTheme = 'light';
+let currentTheme = 'dark';
 
-// Initialize global theme
+// Initialize global theme (website always dark; toggle only affects globe + map style)
 function initGlobalTheme() {
-    // Check for saved theme preference or system preference
+    // Website is always dark
+    document.body.classList.add('dark');
+
+    // Globe/map style: saved preference or default dark
     const savedTheme = localStorage.getItem('appTheme');
     if (savedTheme === 'dark' || savedTheme === 'light') {
         currentTheme = savedTheme;
-    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    } else {
         currentTheme = 'dark';
     }
-    
-    applyGlobalTheme(currentTheme);
-    
-    // Listen for system theme changes
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-        if (!localStorage.getItem('appTheme')) {
-            applyGlobalTheme(e.matches ? 'dark' : 'light');
-        }
-    });
+
+    document.body.setAttribute('data-globe-map-style', currentTheme);
+    updateThemeButtons();
+    if (map) {
+        switchMapStyle(currentTheme);
+    } else {
+        currentStyle = currentTheme;
+    }
+    localStorage.setItem('appTheme', currentTheme);
 }
 
 // ===== GLOBAL LOADING OVERLAY =====
@@ -305,27 +308,20 @@ function hideLoadingScreen() {
     }
 }
 
-// Apply global theme
+// Apply globe/map style only (website stays dark)
 function applyGlobalTheme(theme) {
     currentTheme = theme;
     const body = document.body;
-    
-    if (theme === 'dark') {
-        body.classList.add('dark');
-    } else {
-        body.classList.remove('dark');
-    }
-    
-    // Update theme toggle buttons
+
+    body.classList.add('dark');
+    body.setAttribute('data-globe-map-style', theme);
+
     updateThemeButtons();
-    
-    // Sync map style with global theme
     if (map) {
         switchMapStyle(theme);
     } else {
         currentStyle = theme;
     }
-    
     localStorage.setItem('appTheme', theme);
 }
 
@@ -377,13 +373,11 @@ function handleFileUpload(event) {
             try {
                 const json = JSON.parse(e.target.result);
                 
-                // Validate JSON structure
-                if (!json.semanticSegments) {
-                    const keys = Object.keys(json).join(', ');
-                    throw new Error(`Invalid JSON structure. Expected 'semanticSegments' but found keys: ${keys.substring(0, 200)}`);
-                }
-                if (!Array.isArray(json.semanticSegments)) {
-                    throw new Error(`'semanticSegments' should be an array but got: ${typeof json.semanticSegments}`);
+                // Validate: Android/Web has { semanticSegments }; iOS Google Maps export is root-level array
+                const segments = timelineUtils.getSegmentsFromData(json);
+                if (!segments.length) {
+                    const hint = Array.isArray(json) ? ' (root array was empty)' : ` (expected 'semanticSegments' or root array; got keys: ${Object.keys(json).slice(0, 5).join(', ')})`;
+                    throw new Error(`Invalid JSON structure. No timeline segments found${hint}`);
                 }
                 
                 processAndRenderData(json);
