@@ -1658,7 +1658,7 @@ async function shareCurrentView(mode) {
             await navigator.share({
                 files: [file],
                 title: 'Travel Recap',
-                text: 'My travel recap stats. www.mytravelrecap.com',
+                text: 'Share your travel story with the world @',
                 url: 'https://www.mytravelrecap.com'
             });
             showShareToast('Shared. You can post it from the share sheet.', 'success');
