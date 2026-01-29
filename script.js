@@ -840,10 +840,10 @@ function renderTopPlacesSection(visitStats) {
     
     grid.innerHTML = '';
     
-    // Get all places sorted by visit count (include places without names)
+    // Get top places sorted by visit count (include places without names) - show only top 3
     const allPlaces = Object.values(visitStats)
         .sort((a, b) => b.count - a.count)
-        .slice(0, 6);
+        .slice(0, 3);
     
     if (allPlaces.length === 0) {
         grid.innerHTML = '<p class="col-span-full text-gray-500 dark:text-gray-400">No places found</p>';

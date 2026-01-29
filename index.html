@@ -1903,10 +1903,10 @@
         <header class="text-center mb-12">
             <h1 class="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 mb-3"
                 id="header-title">
-                Your Travel Recap
+                My Travel Recap
             </h1>
             <p class="text-lg text-gray-500 dark:text-gray-400 font-light max-w-2xl mx-auto" id="header-description">
-                Explore everywhere you've been — your distances traveled, places visited, time spent on the move, and the footprint you've left on the world.
+                Remember those cozy year-in-review emails from Google Maps? They quietly vanished when your location history moved onto your device. This little site brings that feeling back — your file stays on your machine, and everything is crunched right in your browser.
             </p>
         </header>
 
@@ -1923,7 +1923,14 @@
                 </div>
                 <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">Load Your Data</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                    Upload your <code class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">GoogleTimeline.json</code>. <br>Your data remains 100% private and processed on device.
+                    Upload your
+                    <code
+                        class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded cursor-pointer underline decoration-dotted underline-offset-2"
+                        onclick="document.getElementById('how-to-timeline')?.scrollIntoView({ behavior: 'smooth', block: 'start' });"
+                        title="Click to see how to get this file">
+                        timeline.json
+                    </code>.
+                    <br>Your data remains 100% private and processed on device.
                 </p>
 
                 <div class="relative group">
@@ -1940,8 +1947,8 @@
                 </button>
                 <div id="upload-status" class="mt-4 text-sm font-medium text-gray-500 dark:text-gray-400 min-h-[20px]"></div>
             </div>
-            <div class="mt-8 text-left glass rounded-3xl p-6 shadow-lg">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Get your GoogleTimeline.json</h3>
+            <div id="how-to-timeline" class="mt-8 text-left glass rounded-3xl p-6 shadow-lg">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">How to get Google Timeline data</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-600 dark:text-gray-300">
                     <div>
                         <p class="font-semibold text-gray-800 dark:text-gray-200 mb-2">Android</p>
