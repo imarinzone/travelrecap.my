@@ -147,3 +147,6 @@ data/*
 .venv/*
 
 .DS_Store
+
+# npm pack / versioned artifact (stray file)
+travelrecap.my@1.0.0
