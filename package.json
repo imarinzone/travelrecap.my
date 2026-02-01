@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/imarinzone/mytravelrecap#readme",
   "dependencies": {
+    "@vercel/analytics": "^1.4.0",
     "@vercel/speed-insights": "^1.0.0"
   },
   "devDependencies": {
