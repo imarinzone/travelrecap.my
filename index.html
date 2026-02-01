@@ -2322,6 +2322,21 @@
         </div>
     </section>
 
+    <!-- Vercel Web Analytics (only on production; skip on localhost to avoid console noise) -->
+    <script>
+      window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    </script>
+    <script>
+      (function () {
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return;
+        var a = document.createElement('script');
+        a.src = '/_vercel/insights/script.js';
+        a.defer = true;
+        a.onerror = function () { /* blocked by client (e.g. ad blocker) – ignore */ };
+        document.body.appendChild(a);
+      })();
+    </script>
+
     <!-- Vercel Speed Insights (only on production; skip on localhost to avoid console noise) -->
     <script>
       window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
