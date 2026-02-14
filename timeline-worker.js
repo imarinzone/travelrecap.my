@@ -34,6 +34,10 @@ self.onmessage = function (e) {
         };
         self.postMessage(payload);
     } catch (err) {
-        self.postMessage({ error: err && err.message ? err.message : String(err) });
+        const msg = err && err.message ? err.message : String(err);
+        if (typeof console !== 'undefined' && console.error) {
+            console.error('[timeline-worker] Parse/process error:', msg, err);
+        }
+        self.postMessage({ error: msg });
     }
 };

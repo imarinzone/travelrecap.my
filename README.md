@@ -96,8 +96,13 @@ App behaviour is controlled by **`config.js`** (loaded before `script.js`). Edit
 | `SHARE_IMAGE_WIDTH` / `SHARE_IMAGE_HEIGHT` | 1080 × 1920 | Share image dimensions (fixed layout) |
 | `DATA_DEMO_URL` | `data/demo.json` | URL for demo data (e.g. “Try demo”) |
 | `GEOJSON_COUNTRIES_URL` | `data/countries.geojson` | URL for country boundaries GeoJSON |
+| `GOOGLE_PLACES_API_KEY` | *(empty)* | Optional. Google Cloud API key with **Places API (New)** enabled. When set, the "Your Favorite Spots" section fetches and shows place address and photo. The "Open in Google Maps" link works without a key. Restrict the key to your domain and to Places API (New) only. |
 
-just edit `config.js` and refresh.
+Edit `config.js` and refresh. For **production (e.g. Vercel)**, do not commit the key: set the environment variable **`GOOGLE_PLACES_API_KEY`** in your host’s dashboard (e.g. Vercel → Project → Settings → Environment Variables). The build script injects it into `config.js` at deploy time.
+
+### Error logging (production)
+
+The app uses a central logger (`timelineUtils.Logger` in `timeline-utils.js`) for info, warnings, and errors, and registers global handlers for uncaught errors and unhandled promise rejections so they are logged in the console. In production you can open the browser devtools console to inspect failures (e.g. script load errors, map/globe load failures, Places API or share errors). To send logs to an external service, you can replace or extend the Logger implementation in `timeline-utils.js` or hook into `window.onerror` / `unhandledrejection` in your own script.
 
 ---
 
@@ -141,11 +146,12 @@ npm run watch:css        # Watch Tailwind while developing
 
 Optimized for [Vercel](https://vercel.com):
 
-- **Build**: `npm run build` (Tailwind → `tailwind.css`).
+- **Build**: `npm run build` (injects env into `config.js`, then builds Tailwind → `tailwind.css`).
 - **Headers**: Custom `Permissions-Policy` in `vercel.json` (no `browsing-topics`).
 - **Output**: Static files from repo root.
+- **Google Places API (production)**: In Vercel → Project → **Settings** → **Environment Variables**, add `GOOGLE_PLACES_API_KEY` with your key (Production, and optionally Preview). The key is written into `config.js` during the build and is not committed to the repo.
 
-Push to your connected repo; no extra config needed.
+Push to your connected repo; set `GOOGLE_PLACES_API_KEY` in Vercel if you want Places features in production.
 
 ---
 

@@ -5,7 +5,7 @@
   "main": "script.js",
   "scripts": {
     "test": "jest",
-    "build": "npm run build:css",
+    "build": "node scripts/inject-env.js && npm run build:css",
     "build:css": "npx @tailwindcss/cli -i ./src/tailwind.css -o ./tailwind.css --minify",
     "watch:css": "npx @tailwindcss/cli -i ./src/tailwind.css -o ./tailwind.css --watch"
   },

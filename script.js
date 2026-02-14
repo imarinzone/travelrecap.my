@@ -87,6 +87,47 @@ function getConfig(key, fallback) {
 }
 const MARKER_CLUSTER_THRESHOLD = getConfig('MARKER_CLUSTER_THRESHOLD', 500);
 
+// Central error logging for production: use Logger when available, else console
+function logError(message, error) {
+    if (typeof timelineUtils !== 'undefined' && timelineUtils.Logger) {
+        timelineUtils.Logger.error(message, error);
+    } else {
+        console.error(message, error != null ? error : '');
+    }
+}
+function logWarn(message, data) {
+    if (typeof timelineUtils !== 'undefined' && timelineUtils.Logger) {
+        timelineUtils.Logger.warn(message, data);
+    } else {
+        console.warn(message, data != null ? data : '');
+    }
+}
+
+// Global error handlers for production: catch uncaught errors and unhandled rejections
+if (typeof window !== 'undefined') {
+    window.onerror = function (message, source, lineno, colno, error) {
+        logError(`Uncaught error at ${source || 'unknown'}:${lineno}:${colno} — ${message}`, error);
+        return false;
+    };
+    window.addEventListener('unhandledrejection', function (event) {
+        logError('Unhandled promise rejection', event.reason);
+    });
+}
+
+const STORAGE_KEY_PLACE_DETAILS_OPT_IN = 'mytravelrecap_place_details_opt_in';
+function getPlaceDetailsOptIn() {
+    try {
+        return localStorage.getItem(STORAGE_KEY_PLACE_DETAILS_OPT_IN) === 'true';
+    } catch (e) {
+        return false;
+    }
+}
+function setPlaceDetailsOptIn(value) {
+    try {
+        localStorage.setItem(STORAGE_KEY_PLACE_DETAILS_OPT_IN, value ? 'true' : 'false');
+    } catch (e) {}
+}
+
 // Lazy-load scripts to reduce initial bundle and improve FCP/LCP
 function loadScript(src) {
     if (document.querySelector(`script[src="${src}"]`)) return Promise.resolve();
@@ -143,7 +184,7 @@ const MARKER_BATCH_SIZE = getConfig('MARKER_BATCH_SIZE', 200);
 function initMap() {
     if (isMapInitialized) return;
     if (typeof L === 'undefined') {
-        console.error('Leaflet library not loaded');
+        logError('Leaflet library not loaded');
         const errorMsg = 'Map library failed to load. Please check your internet connection.';
         if (typeof showShareToast === 'function') {
             showShareToast(errorMsg, 'error');
@@ -985,39 +1026,47 @@ function renderTransportBreakdown(transportStats) {
 function renderTopPlacesSection(visitStats) {
     const grid = document.getElementById('stat-top-places-grid');
     if (!grid) return;
-    
+
     grid.innerHTML = '';
-    
-    // Get top places sorted by visit count (include places without names) - show only top 3
+
     const allPlaces = Object.values(visitStats)
         .sort((a, b) => b.count - a.count)
         .slice(0, 3);
-    
+
     if (allPlaces.length === 0) {
         grid.innerHTML = '<p class="col-span-full text-gray-500 dark:text-gray-400">No places found</p>';
         return;
     }
-    
+
+    const apiKey = (getConfig('GOOGLE_PLACES_API_KEY', '') || '').trim();
+    const usePlaceDetailsApi = !!apiKey && getPlaceDetailsOptIn();
+
     allPlaces.forEach((place, index) => {
         const card = document.createElement('div');
         card.className = 'place-stat-card';
-        
-        // Use name if available, otherwise show coordinates
+
         const hasName = place.name && place.name !== "Unknown Place";
-        const displayName = hasName ? place.name : formatLatLng(place.latLng);
-        const displayTitle = hasName ? place.name : place.latLng;
-        const osmUrl = getOpenStreetMapUrl(place.latLng);
-        
+        // Never show coordinates: use timeline name, or "Loading…" / "Favorite spot #n" until we have place details
+        const initialTitle = hasName ? place.name : (usePlaceDetailsApi ? 'Loading…' : `Favorite spot #${index + 1}`);
+        const googleMapsUrl = getGoogleMapsUrl(place.latLng);
+
+        const linksHtml = googleMapsUrl
+            ? `<a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-600 dark:text-blue-400 ml-6 mt-1 inline-flex items-center gap-1 hover:underline">Open in Google Maps</a>`
+            : '';
+
+        const placeDetailsHtml = usePlaceDetailsApi
+            ? `<div class="place-details mt-2 ml-6 text-xs text-gray-600 dark:text-gray-400 min-h-[1.25rem]">Loading…</div>`
+            : '';
+
         card.innerHTML = `
             <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2">
                     <span class="text-gray-400 dark:text-gray-500 text-sm flex-shrink-0">#${index + 1}</span>
-                    <span class="place-name ${!hasName ? 'text-gray-500 dark:text-gray-400 font-mono text-sm' : ''}" title="${displayTitle}">${displayName}</span>
+                    <span class="place-name" title="${initialTitle.replace(/"/g, '&quot;')}">${initialTitle.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
                 </div>
                 ${place.country ? `<p class="text-xs text-gray-400 dark:text-gray-500 ml-6 mt-0.5">${place.country}</p>` : ''}
-                ${osmUrl ? `<a href="${osmUrl}" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-600 dark:text-blue-400 ml-6 mt-1 inline-flex items-center gap-1 hover:underline">
-                    <span>Open location</span>
-                </a>` : ''}
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 ml-6 mt-1">${linksHtml}</div>
+                ${placeDetailsHtml}
             </div>
             <div class="text-right flex-shrink-0">
                 <div class="place-count">${place.count}</div>
@@ -1025,6 +1074,35 @@ function renderTopPlacesSection(visitStats) {
             </div>
         `;
         grid.appendChild(card);
+
+        if (usePlaceDetailsApi && place.latLng) {
+            const nameEl = card.querySelector('.place-name');
+            const detailsEl = card.querySelector('.place-details');
+            if (detailsEl) {
+                fetchPlaceDetails(place.latLng).then(function (details) {
+                    if (!detailsEl.parentNode) return;
+                    if (details && details.displayName && nameEl) {
+                        nameEl.textContent = details.displayName;
+                        nameEl.title = details.formattedAddress || details.displayName;
+                    } else if (!details && nameEl && !hasName) {
+                        nameEl.textContent = `Favorite spot #${index + 1}`;
+                    }
+                    if (!details) {
+                        detailsEl.textContent = '';
+                        return;
+                    }
+                    const parts = [];
+                    if (details.formattedAddress) {
+                        const escaped = details.formattedAddress.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                        parts.push(`<span class="block mt-0.5">${escaped}</span>`);
+                    }
+                    if (details.photoUrl) {
+                        parts.push(`<img src="${details.photoUrl.replace(/"/g, '&quot;')}" alt="" class="mt-2 w-full max-w-[200px] rounded-lg object-cover shadow-sm" loading="lazy" />`);
+                    }
+                    detailsEl.innerHTML = parts.length ? parts.join('') : '';
+                });
+            }
+        }
     });
 }
 
@@ -1040,16 +1118,100 @@ function formatLatLng(latLngStr) {
     return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 }
 
-// Helper to build an OpenStreetMap URL for a given lat/lng string
-function getOpenStreetMapUrl(latLngStr) {
-    if (!latLngStr) return '';
-    const parts = latLngStr.replace(/°/g, '').split(',');
-    if (parts.length !== 2) return '';
+// Helper to parse lat/lng string (handles "lat,lng", "geo:lat,lng", and degree symbols)
+function parseLatLngForUrl(latLngStr) {
+    if (!latLngStr || typeof latLngStr !== 'string') return null;
+    const normalized = latLngStr.replace(/^geo:/i, '').replace(/°/g, '').trim();
+    const parts = normalized.split(',');
+    if (parts.length !== 2) return null;
     const lat = parseFloat(parts[0].trim());
     const lng = parseFloat(parts[1].trim());
-    if (isNaN(lat) || isNaN(lng)) return '';
-    const zoom = 14;
-    return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=${zoom}/${lat}/${lng}`;
+    if (isNaN(lat) || isNaN(lng)) return null;
+    return { lat, lng };
+}
+
+// Helper to build a Google Maps URL for a given lat/lng string (opens spot in Google Maps)
+function getGoogleMapsUrl(latLngStr) {
+    const parsed = parseLatLngForUrl(latLngStr);
+    if (!parsed) return '';
+    return `https://www.google.com/maps?q=${parsed.lat},${parsed.lng}`;
+}
+
+// Cache for Google Place details by rounded lat,lng (avoid re-fetching on re-render)
+const placeDetailsCache = {};
+function placeDetailsCacheKey(lat, lng) {
+    return `${Number(lat).toFixed(4)},${Number(lng).toFixed(4)}`;
+}
+
+/**
+ * Fetch place details (address, photo) from Google Places API (New).
+ * Requires GOOGLE_PLACES_API_KEY in config with Places API (New) enabled.
+ * Returns { displayName, formattedAddress, photoUrl } or null on error/no key.
+ */
+async function fetchPlaceDetails(latLngStr) {
+    const apiKey = getConfig('GOOGLE_PLACES_API_KEY', '');
+    if (!apiKey || typeof apiKey !== 'string' || apiKey.trim() === '') return null;
+
+    const parsed = parseLatLngForUrl(latLngStr);
+    if (!parsed) return null;
+
+    const key = placeDetailsCacheKey(parsed.lat, parsed.lng);
+    if (placeDetailsCache[key] !== undefined) return placeDetailsCache[key];
+
+    try {
+        const { lat, lng } = parsed;
+        const searchUrl = 'https://places.googleapis.com/v1/places:searchNearby';
+        const searchBody = JSON.stringify({
+            maxResultCount: 1,
+            rankPreference: 'DISTANCE',
+            locationRestriction: {
+                circle: {
+                    center: { latitude: lat, longitude: lng },
+                    radius: 50
+                }
+            }
+        });
+        const searchRes = await fetch(searchUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': apiKey,
+                'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.photos'
+            },
+            body: searchBody
+        });
+        if (!searchRes.ok) {
+            const errText = await searchRes.text();
+            if (typeof timelineUtils !== 'undefined' && timelineUtils.Logger) {
+                timelineUtils.Logger.warn('Places searchNearby failed', searchRes.status, errText);
+            }
+            placeDetailsCache[key] = null;
+            return null;
+        }
+        const searchData = await searchRes.json();
+        const places = searchData.places;
+        if (!places || places.length === 0) {
+            placeDetailsCache[key] = null;
+            return null;
+        }
+        const place = places[0];
+        const displayName = place.displayName && place.displayName.text ? place.displayName.text : null;
+        const formattedAddress = place.formattedAddress || null;
+        let photoUrl = null;
+        if (place.photos && place.photos.length > 0 && place.photos[0].name) {
+            const photoName = place.photos[0].name;
+            photoUrl = `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=400&key=${encodeURIComponent(apiKey)}`;
+        }
+        const result = { displayName, formattedAddress, photoUrl };
+        placeDetailsCache[key] = result;
+        return result;
+    } catch (err) {
+        if (typeof timelineUtils !== 'undefined' && timelineUtils.Logger) {
+            timelineUtils.Logger.warn('fetchPlaceDetails error', err);
+        }
+        placeDetailsCache[key] = null;
+        return null;
+    }
 }
 
 function renderStatistics(stats) {
@@ -2441,7 +2603,9 @@ function initBackgroundGlobe() {
             if (bgGlobeContainer && typeof Globe !== 'undefined') {
                 bgGlobe = new Globe('bg-globe-container', []); // Empty visited countries for now
             }
-        }).catch(() => {});
+        }).catch(function (err) {
+            logError('Background globe failed to load', err);
+        });
     };
     if (typeof requestIdleCallback !== 'undefined') {
         requestIdleCallback(cb, { timeout: 2000 });
@@ -2482,7 +2646,26 @@ if (document.readyState === 'loading') {
         const themeDarkBtn = document.getElementById('theme-dark');
         if (themeLightBtn) themeLightBtn.addEventListener('click', () => switchGlobalTheme('light'));
         if (themeDarkBtn) themeDarkBtn.addEventListener('click', () => switchGlobalTheme('dark'));
-        
+
+        // Place details opt-in toggle (privacy: off by default, persisted in localStorage)
+        const placeDetailsOptInBtn = document.getElementById('place-details-opt-in');
+        if (placeDetailsOptInBtn) {
+            placeDetailsOptInBtn.setAttribute('aria-checked', getPlaceDetailsOptIn() ? 'true' : 'false');
+            const placeDetailsLabel = document.querySelector('label[for="place-details-opt-in"]');
+            if (placeDetailsLabel) {
+                placeDetailsLabel.addEventListener('click', (e) => { e.preventDefault(); placeDetailsOptInBtn.click(); });
+            }
+            placeDetailsOptInBtn.addEventListener('click', () => {
+                const next = !getPlaceDetailsOptIn();
+                setPlaceDetailsOptIn(next);
+                placeDetailsOptInBtn.setAttribute('aria-checked', next ? 'true' : 'false');
+                const dashboard = document.getElementById('dashboard-content');
+                if (dashboard && !dashboard.classList.contains('hidden')) {
+                    renderDashboard();
+                }
+            });
+        }
+
         // Fullscreen event listener
         const fullscreenBtn = document.getElementById('map-fullscreen');
         if (fullscreenBtn) fullscreenBtn.addEventListener('click', toggleFullscreen);
@@ -2536,7 +2719,25 @@ if (document.readyState === 'loading') {
     const themeDarkBtn = document.getElementById('theme-dark');
     if (themeLightBtn) themeLightBtn.addEventListener('click', () => switchGlobalTheme('light'));
     if (themeDarkBtn) themeDarkBtn.addEventListener('click', () => switchGlobalTheme('dark'));
-    
+
+    const placeDetailsOptInBtn = document.getElementById('place-details-opt-in');
+    if (placeDetailsOptInBtn) {
+        placeDetailsOptInBtn.setAttribute('aria-checked', getPlaceDetailsOptIn() ? 'true' : 'false');
+        const placeDetailsLabel = document.querySelector('label[for="place-details-opt-in"]');
+        if (placeDetailsLabel) {
+            placeDetailsLabel.addEventListener('click', (e) => { e.preventDefault(); placeDetailsOptInBtn.click(); });
+        }
+        placeDetailsOptInBtn.addEventListener('click', () => {
+            const next = !getPlaceDetailsOptIn();
+            setPlaceDetailsOptIn(next);
+            placeDetailsOptInBtn.setAttribute('aria-checked', next ? 'true' : 'false');
+            const dashboard = document.getElementById('dashboard-content');
+            if (dashboard && !dashboard.classList.contains('hidden')) {
+                renderDashboard();
+            }
+        });
+    }
+
     // Fullscreen event listener
     const fullscreenBtn = document.getElementById('map-fullscreen');
     if (fullscreenBtn) fullscreenBtn.addEventListener('click', toggleFullscreen);
@@ -2872,7 +3073,8 @@ function initGlobeMapReveal() {
                                 hideLoadingScreen();
                             }
                         });
-                    }).catch(() => {
+                    }).catch(function (err) {
+                        logError('Map library failed to load', err);
                         hideLoadingScreen();
                         if (typeof showShareToast === 'function') {
                             showShareToast('Map library failed to load.', 'error');

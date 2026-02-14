@@ -739,6 +739,10 @@
         }
     </style>
     <style>
+        :root {
+            --color-blue-500: #3b82f6;
+        }
+
         body {
             font-family: 'Outfit', sans-serif;
             background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
@@ -1038,6 +1042,17 @@
         }
         .theme-switch:has(#theme-dark.active) .theme-switch-knob {
             transform: translateX(40px);
+        }
+
+        /* Place details opt-in toggle (homepage, subtle) */
+        .place-details-toggle[aria-checked="true"] {
+            background-color: var(--color-blue-500);
+        }
+        body.dark .place-details-toggle[aria-checked="true"] {
+            background-color: var(--color-blue-500);
+        }
+        .place-details-toggle[aria-checked="true"] .place-details-toggle-dot {
+            transform: translate(1rem, 0);
         }
 
         /* Summary globe styling */
@@ -2043,6 +2058,17 @@
                     </code>.
                     <br>Your data remains 100% private and processed on device.
                 </p>
+
+                <!-- Opt-in: fetch place details from Google (privacy-first, off by default) -->
+                <div class="flex items-center justify-center gap-2 mb-6">
+                    <label for="place-details-opt-in" class="text-xs text-gray-500 dark:text-gray-400 cursor-pointer select-none">
+                        Fetch place details from Google (opt-in)
+                    </label>
+                    <button type="button" id="place-details-opt-in" role="switch" aria-checked="false" aria-label="Use Google to fetch place details for favorite spots"
+                        class="place-details-toggle relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 bg-gray-200 dark:bg-gray-600">
+                        <span class="place-details-toggle-dot pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 translate-x-0.5" aria-hidden="true"></span>
+                    </button>
+                </div>
 
                 <div class="relative group">
                     <input type="file" id="timeline-file-input" accept=".json"

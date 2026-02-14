@@ -41,7 +41,12 @@
                     req.onerror = function () { reject(req.error); };
                 });
             })
-            .catch(function () { return null; });
+            .catch(function (err) {
+                if (typeof console !== 'undefined' && console.warn) {
+                    console.warn('[geodata-cache] get failed:', key, err);
+                }
+                return null;
+            });
     }
 
     function set(key, value) {
@@ -58,6 +63,9 @@
             .catch(function (err) {
                 if (err && err.name === 'QuotaExceededError') {
                     return Promise.resolve();
+                }
+                if (typeof console !== 'undefined' && console.warn) {
+                    console.warn('[geodata-cache] set failed:', err);
                 }
                 return Promise.reject(err);
             });
