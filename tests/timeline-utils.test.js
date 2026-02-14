@@ -157,6 +157,101 @@ describe('Timeline Utilities', () => {
             expect(stats.transport['IN_BUS']).toBeDefined();
             expect(stats.transport['IN_BUS'].distanceMeters).toBeCloseTo(8454.921875);
         });
+
+        test('should include all visits when probabilityThreshold is 0 or omitted', () => {
+            const data = {
+                semanticSegments: [
+                    {
+                        startTime: '2023-01-01T10:00:00Z',
+                        visit: {
+                            probability: 0.3,
+                            topCandidate: {
+                                placeLocation: { latLng: '10, 20' },
+                                placeId: 'low'
+                            }
+                        }
+                    },
+                    {
+                        startTime: '2023-01-02T10:00:00Z',
+                        visit: {
+                            probability: 0.9,
+                            topCandidate: {
+                                placeLocation: { latLng: '30, 40' },
+                                placeId: 'high'
+                            }
+                        }
+                    }
+                ]
+            };
+            const processed = timelineUtils.processTimelineData(data);
+            expect(processed.allSegments.length).toBe(2);
+            expect(processed.allLocations.length).toBe(2);
+        });
+
+        test('should exclude visits below probabilityThreshold', () => {
+            const data = {
+                semanticSegments: [
+                    {
+                        startTime: '2023-01-01T10:00:00Z',
+                        visit: {
+                            probability: 0.3,
+                            topCandidate: {
+                                placeLocation: { latLng: '10, 20' },
+                                placeId: 'low'
+                            }
+                        }
+                    },
+                    {
+                        startTime: '2023-01-02T10:00:00Z',
+                        visit: {
+                            probability: 0.9,
+                            topCandidate: {
+                                placeLocation: { latLng: '30, 40' },
+                                placeId: 'high'
+                            }
+                        }
+                    }
+                ]
+            };
+            const processed = timelineUtils.processTimelineData(data, { probabilityThreshold: 0.5 });
+            expect(processed.allSegments.length).toBe(1);
+            expect(processed.allLocations.length).toBe(1);
+            expect(processed.allLocations[0].lat).toBe(30);
+            expect(processed.allLocations[0].lng).toBe(40);
+            const stats = timelineUtils.calculateStats(processed.allSegments);
+            expect(stats.totalVisits).toBe(1);
+        });
+
+        test('should include visits with no probability when threshold is set', () => {
+            const data = {
+                semanticSegments: [
+                    {
+                        startTime: '2023-01-01T10:00:00Z',
+                        visit: {
+                            topCandidate: {
+                                placeLocation: { latLng: '10, 20' },
+                                placeId: 'no-prob'
+                            }
+                        }
+                    }
+                ]
+            };
+            const processed = timelineUtils.processTimelineData(data, { probabilityThreshold: 0.5 });
+            expect(processed.allSegments.length).toBe(1);
+            expect(processed.allLocations.length).toBe(1);
+        });
+
+        test('visitPassesProbabilityThreshold: respects numeric and string probability', () => {
+            const pass = timelineUtils.visitPassesProbabilityThreshold;
+            expect(pass({ probability: 0.9 }, 0.5)).toBe(true);
+            expect(pass({ probability: 0.3 }, 0.5)).toBe(false);
+            expect(pass({ probability: '0.936220' }, 0.5)).toBe(true);
+            expect(pass({ probability: '0.2' }, 0.5)).toBe(false);
+            expect(pass({}, 0.5)).toBe(true);
+            expect(pass({ probability: null }, 0.5)).toBe(true);
+            expect(pass(null, 0.5)).toBe(true);
+            expect(pass({ probability: 0.5 }, 0)).toBe(true);
+        });
     });
 
 });

@@ -202,9 +202,30 @@
         return placeLocation.latLng || null;
     }
 
+    /**
+     * Check if a visit segment passes the probability threshold.
+     * visit.probability can be number or string (e.g. "0.936220"); missing = included.
+     */
+    function visitPassesProbabilityThreshold(visit, threshold) {
+        if (threshold == null || threshold <= 0) return true;
+        const p = visit && visit.probability;
+        if (p == null) return true;
+        const num = typeof p === 'string' ? parseFloat(p) : Number(p);
+        return isNaN(num) || num >= threshold;
+    }
+
     // Process Google Timeline JSON (Android/Web semanticSegments or iOS root array)
-    function processTimelineData(data) {
-        const allSegments = getSegmentsFromData(data);
+    // options: { probabilityThreshold: number } — min visit probability (0–1) to include; default 0 = include all
+    function processTimelineData(data, options) {
+        const rawSegments = getSegmentsFromData(data);
+        const probabilityThreshold = options && options.probabilityThreshold != null
+            ? Number(options.probabilityThreshold) : 0;
+        const allSegments = probabilityThreshold > 0
+            ? rawSegments.filter(seg => {
+                if (!seg.visit) return true;
+                return visitPassesProbabilityThreshold(seg.visit, probabilityThreshold);
+            })
+            : rawSegments;
         const allLocations = [];
         const years = new Set();
 
@@ -436,6 +457,7 @@
     }
 
     exports.processTimelineData = processTimelineData;
+    exports.visitPassesProbabilityThreshold = visitPassesProbabilityThreshold;
     exports.calculateStats = calculateStats;
     exports.calculateAdvancedStats = calculateAdvancedStats;
     exports.setCountryGeoJSON = setCountryGeoJSON;

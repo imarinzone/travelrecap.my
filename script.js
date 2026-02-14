@@ -22,21 +22,27 @@ let cachedAllTimeStats = null;
 let cachedAllTimeAdvancedStats = null;
 let statsCacheByYear = {}; // key: String(year) or 'all'; value: { stats, advancedStats, statsSegments }
 
-// CartoDB Tile Layer URLs
-const tileLayers = {
-    light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© OpenStreetMap contributors © CARTO',
-        subdomains: 'abcd',
-        maxZoom: 19,
-        crossOrigin: true
-    }),
-    dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© OpenStreetMap contributors © CARTO',
-        subdomains: 'abcd',
-        maxZoom: 19,
-        crossOrigin: true
-    })
-};
+// CartoDB Tile Layer URLs (lazy so Leaflet can be loaded on demand)
+let _tileLayers = null;
+function getTileLayers() {
+    if (_tileLayers) return _tileLayers;
+    if (typeof L === 'undefined') return null;
+    _tileLayers = {
+        light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap contributors © CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19,
+            crossOrigin: true
+        }),
+        dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap contributors © CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19,
+            crossOrigin: true
+        })
+    };
+    return _tileLayers;
+}
 
 // Cached country GeoJSON for passing to Worker (offline country lookup there)
 let countryGeoJSONCache = null;
@@ -80,13 +86,62 @@ function getConfig(key, fallback) {
     return APP_CONFIG[key] !== undefined && APP_CONFIG[key] !== null ? APP_CONFIG[key] : fallback;
 }
 const MARKER_CLUSTER_THRESHOLD = getConfig('MARKER_CLUSTER_THRESHOLD', 500);
+
+// Lazy-load scripts to reduce initial bundle and improve FCP/LCP
+function loadScript(src) {
+    if (document.querySelector(`script[src="${src}"]`)) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+        document.head.appendChild(s);
+    });
+}
+function loadScriptsInOrder(urls) {
+    return urls.reduce((p, url) => p.then(() => loadScript(url)), Promise.resolve());
+}
+
+let d3GlobePromise = null;
+function ensureD3AndGlobeLoaded() {
+    if (d3GlobePromise) return d3GlobePromise;
+    d3GlobePromise = loadScriptsInOrder([
+        'https://d3js.org/d3.v7.min.js',
+        'components/globe.js'
+    ]);
+    return d3GlobePromise;
+}
+
+let mapLibsPromise = null;
+function ensureMapLibrariesLoaded() {
+    if (mapLibsPromise) return mapLibsPromise;
+    mapLibsPromise = loadScriptsInOrder([
+        'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+        'https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js',
+        'https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js'
+    ]);
+    return mapLibsPromise;
+}
+
+let htmlToImagePromise = null;
+function ensureHtmlToImageLoaded() {
+    if (htmlToImagePromise) return htmlToImagePromise;
+    htmlToImagePromise = loadScript('https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js');
+    return htmlToImagePromise;
+}
+
+let rbushPromise = null;
+function ensureRbushLoaded() {
+    if (rbushPromise) return rbushPromise;
+    rbushPromise = loadScript('https://cdn.jsdelivr.net/npm/rbush@3.0.1/rbush.min.js');
+    return rbushPromise;
+}
 const HEATMAP_THRESHOLD = getConfig('HEATMAP_THRESHOLD', 500);
 const MARKER_BATCH_SIZE = getConfig('MARKER_BATCH_SIZE', 200);
 
-// Initialize map
+// Initialize map (call after ensureMapLibrariesLoaded())
 function initMap() {
     if (isMapInitialized) return;
-    // Check if Leaflet is loaded
     if (typeof L === 'undefined') {
         console.error('Leaflet library not loaded');
         const errorMsg = 'Map library failed to load. Please check your internet connection.';
@@ -112,7 +167,8 @@ function initMap() {
     });
 
     // Add initial tile layer
-    tileLayers[currentStyle].addTo(map);
+    const layers = getTileLayers();
+    if (layers) layers[currentStyle].addTo(map);
     updateStyleButtons();
     updateMapTheme();
 
@@ -466,18 +522,20 @@ function handleFileUpload(event) {
             hideLoadingScreen();
         }
         function runSync() {
-            try {
-                const json = JSON.parse(jsonText);
-                const segments = timelineUtils.getSegmentsFromData(json);
-                if (!segments.length) {
-                    const hint = Array.isArray(json) ? ' (root array was empty)' : ` (expected 'semanticSegments' or root array; got keys: ${Object.keys(json).slice(0, 5).join(', ')})`;
-                    throw new Error(`Invalid JSON structure. No timeline segments found${hint}`);
+            ensureRbushLoaded().then(() => {
+                try {
+                    const json = JSON.parse(jsonText);
+                    const segments = timelineUtils.getSegmentsFromData(json);
+                    if (!segments.length) {
+                        const hint = Array.isArray(json) ? ' (root array was empty)' : ` (expected 'semanticSegments' or root array; got keys: ${Object.keys(json).slice(0, 5).join(', ')})`;
+                        throw new Error(`Invalid JSON structure. No timeline segments found${hint}`);
+                    }
+                    processAndRenderData(json);
+                    done();
+                } catch (error) {
+                    fail(error);
                 }
-                processAndRenderData(json);
-                done();
-            } catch (error) {
-                fail(error);
-            }
+            }).catch(() => fail(new Error('Required script failed to load.')));
         }
 
         setTimeout(() => {
@@ -500,7 +558,11 @@ function handleFileUpload(event) {
                     worker.onerror = function () {
                         runSync();
                     };
-                    worker.postMessage({ jsonText, countryGeoJSON: countryGeoJSONCache || null });
+                    worker.postMessage({
+                        jsonText,
+                        countryGeoJSON: countryGeoJSONCache || null,
+                        probabilityThreshold: getConfig('PROBABILITY_THRESHOLD', 0)
+                    });
                 } catch (err) {
                     runSync();
                 }
@@ -561,45 +623,50 @@ function applyProcessedDataFromWorker(payload) {
     const visitedCountries = Array.isArray(initialStats.countries) ? initialStats.countries : [];
     hideBackgroundGlobe();
 
-    const globeContainer = document.getElementById('globe-container');
-    if (globeContainer) {
-        globeContainer.innerHTML = '';
-        window.visitedCountriesArray = visitedCountries;
-        globe = new Globe('globe-container', visitedCountries);
-        globeContainer.classList.remove('opacity-0');
-        globeContainer.classList.add('opacity-50');
-    }
+    ensureD3AndGlobeLoaded().then(() => {
+        const globeContainer = document.getElementById('globe-container');
+        if (globeContainer) {
+            globeContainer.innerHTML = '';
+            window.visitedCountriesArray = visitedCountries;
+            globe = new Globe('globe-container', visitedCountries);
+            globeContainer.classList.remove('opacity-0');
+            globeContainer.classList.add('opacity-50');
+        }
 
-    initializeYearFilter(years);
-    if (years.length > 0) {
-        const sortedYears = [...years].sort((a, b) => a - b);
-        selectedYear = sortedYears[sortedYears.length - 1].toString();
-        localStorage.setItem('mapYear', selectedYear);
-        updateTimelineSelection();
-        document.getElementById('header-title').textContent = `Your ${selectedYear} Recap`;
-        const headerDesc = document.getElementById('header-description');
-        if (headerDesc) headerDesc.classList.add('hidden');
-    }
+        initializeYearFilter(years);
+        if (years.length > 0) {
+            const sortedYears = [...years].sort((a, b) => a - b);
+            selectedYear = sortedYears[sortedYears.length - 1].toString();
+            localStorage.setItem('mapYear', selectedYear);
+            updateTimelineSelection();
+            document.getElementById('header-title').textContent = `Your ${selectedYear} Recap`;
+            const headerDesc = document.getElementById('header-description');
+            if (headerDesc) headerDesc.classList.add('hidden');
+        }
 
-    renderDashboard();
+        renderDashboard();
 
-    const uploadSection = document.getElementById('upload-section');
-    if (uploadSection) uploadSection.classList.add('hidden');
-    const shareButton = document.getElementById('taskbar-share');
-    if (shareButton) shareButton.classList.remove('hidden');
-    const restartButton = document.getElementById('restart-button');
-    if (restartButton) restartButton.classList.remove('hidden');
+        const uploadSection = document.getElementById('upload-section');
+        if (uploadSection) uploadSection.classList.add('hidden');
+        const shareButton = document.getElementById('taskbar-share');
+        if (shareButton) shareButton.classList.remove('hidden');
+        const restartButton = document.getElementById('restart-button');
+        if (restartButton) restartButton.classList.remove('hidden');
 
-    const dashboard = document.getElementById('dashboard-content');
-    if (dashboard && typeof dashboard.scrollIntoView === 'function') {
-        dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+        const dashboard = document.getElementById('dashboard-content');
+        if (dashboard && typeof dashboard.scrollIntoView === 'function') {
+            dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }).catch(() => {
+        timelineUtils.Logger.error('Globe library failed to load');
+    });
 }
 
 // Process Google Timeline JSON & Update UI (main-thread fallback when Worker unavailable)
 function processAndRenderData(json) {
     timelineUtils.Logger.time('Data Processing');
-    const processed = timelineUtils.processTimelineData(json);
+    const probabilityThreshold = getConfig('PROBABILITY_THRESHOLD', 0);
+    const processed = timelineUtils.processTimelineData(json, { probabilityThreshold });
 
     allSegments = processed.allSegments;
     allLocations = processed.allLocations;
@@ -617,40 +684,45 @@ function processAndRenderData(json) {
     timelineUtils.Logger.timeEnd('Data Processing');
 
     hideBackgroundGlobe();
-    const globeContainer = document.getElementById('globe-container');
-    if (globeContainer) {
-        globeContainer.innerHTML = '';
-        const visitedCountries = Array.from(initialStats.countries);
-        window.visitedCountriesArray = visitedCountries;
-        globe = new Globe('globe-container', visitedCountries);
-        globeContainer.classList.remove('opacity-0');
-        globeContainer.classList.add('opacity-50');
-    }
 
-    initializeYearFilter(years);
-    if (years.length > 0) {
-        const sortedYears = [...years].sort((a, b) => a - b);
-        selectedYear = sortedYears[sortedYears.length - 1].toString();
-        localStorage.setItem('mapYear', selectedYear);
-        updateTimelineSelection();
-        document.getElementById('header-title').textContent = `Your ${selectedYear} Recap`;
-        const headerDesc = document.getElementById('header-description');
-        if (headerDesc) headerDesc.classList.add('hidden');
-    }
+    ensureD3AndGlobeLoaded().then(() => {
+        const globeContainer = document.getElementById('globe-container');
+        if (globeContainer) {
+            globeContainer.innerHTML = '';
+            const visitedCountries = Array.from(initialStats.countries);
+            window.visitedCountriesArray = visitedCountries;
+            globe = new Globe('globe-container', visitedCountries);
+            globeContainer.classList.remove('opacity-0');
+            globeContainer.classList.add('opacity-50');
+        }
 
-    renderDashboard();
+        initializeYearFilter(years);
+        if (years.length > 0) {
+            const sortedYears = [...years].sort((a, b) => a - b);
+            selectedYear = sortedYears[sortedYears.length - 1].toString();
+            localStorage.setItem('mapYear', selectedYear);
+            updateTimelineSelection();
+            document.getElementById('header-title').textContent = `Your ${selectedYear} Recap`;
+            const headerDesc = document.getElementById('header-description');
+            if (headerDesc) headerDesc.classList.add('hidden');
+        }
 
-    const uploadSection = document.getElementById('upload-section');
-    if (uploadSection) uploadSection.classList.add('hidden');
-    const shareButton = document.getElementById('taskbar-share');
-    if (shareButton) shareButton.classList.remove('hidden');
-    const restartButton = document.getElementById('restart-button');
-    if (restartButton) restartButton.classList.remove('hidden');
+        renderDashboard();
 
-    const dashboard = document.getElementById('dashboard-content');
-    if (dashboard && typeof dashboard.scrollIntoView === 'function') {
-        dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+        const uploadSection = document.getElementById('upload-section');
+        if (uploadSection) uploadSection.classList.add('hidden');
+        const shareButton = document.getElementById('taskbar-share');
+        if (shareButton) shareButton.classList.remove('hidden');
+        const restartButton = document.getElementById('restart-button');
+        if (restartButton) restartButton.classList.remove('hidden');
+
+        const dashboard = document.getElementById('dashboard-content');
+        if (dashboard && typeof dashboard.scrollIntoView === 'function') {
+            dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }).catch(() => {
+        timelineUtils.Logger.error('Globe library failed to load');
+    });
 }
 
 // Main render function that updates all sections based on selectedYear
@@ -873,8 +945,7 @@ const transportConfig = {
     'MOTORCYCLING': { label: 'Motorcycle' },
     'IN_FERRY': { label: 'Ferry' },
     'SAILING': { label: 'Sailing' },
-    'SKIING': { label: 'Skiing' },
-    'UNKNOWN': { label: 'Other' }
+    'SKIING': { label: 'Skiing' }
 };
 
 function renderTransportBreakdown(transportStats) {
@@ -883,8 +954,9 @@ function renderTransportBreakdown(transportStats) {
     
     grid.innerHTML = '';
     
-    // Sort by distance (descending) and take top 8
+    // Sort by distance (descending), exclude UNKNOWN/Other, take top 8
     const sortedTransport = Object.entries(transportStats)
+        .filter(([type]) => type !== 'UNKNOWN')
         .sort(([, a], [, b]) => b.distanceMeters - a.distanceMeters)
         .slice(0, 8);
     
@@ -894,7 +966,8 @@ function renderTransportBreakdown(transportStats) {
     }
     
     sortedTransport.forEach(([type, data]) => {
-        const config = transportConfig[type] || transportConfig['UNKNOWN'];
+        const config = transportConfig[type];
+        if (!config) return;
         const distanceKm = Math.round(data.distanceMeters / 1000);
         const durationHours = Math.round(data.durationMs / (1000 * 60 * 60));
         
@@ -1677,6 +1750,14 @@ async function shareCurrentView(mode) {
         return;
     }
 
+    try {
+        await ensureHtmlToImageLoaded();
+    } catch (e) {
+        timelineUtils.Logger.error('html-to-image failed to load', e);
+        showShareToast('Share library failed to load. Please try again.', 'error');
+        return;
+    }
+
     const mapOverlay = document.getElementById('map-overlay');
     const isMapOpen = mapOverlay && !mapOverlay.classList.contains('hidden');
     const mapContainer = document.getElementById('map-container-wrapper');
@@ -1935,6 +2016,7 @@ function renderTravelTrends(transportStats) {
     grid.innerHTML = '';
 
     const sortedTransport = Object.entries(transportStats)
+        .filter(([type]) => type !== 'UNKNOWN')
         .sort(([, a], [, b]) => b.distanceMeters - a.distanceMeters)
         .slice(0, 6);
 
@@ -2126,7 +2208,7 @@ function renderMarkers(onDone) {
             blur: 20,
             maxZoom: 17,
             minOpacity: 0.35,
-            gradient: { 0.2: '#6366f1', 0.5: '#8b5cf6', 0.8: '#a855f7', 1: '#c084fc' }
+            gradient: { 0.2: '#93c5fd', 0.5: '#60a5fa', 0.8: '#3b82f6', 1: '#2563eb' }
         });
         map.addLayer(heatLayer);
         timelineUtils.Logger.info(`Rendered ${filteredLocations.length} points as heatmap`);
@@ -2227,7 +2309,8 @@ function switchMapStyle(style) {
     });
 
     // Add new layer
-    tileLayers[currentStyle].addTo(map);
+    const layers = getTileLayers();
+    if (layers) layers[currentStyle].addTo(map);
     updateStyleButtons();
     updateMapTheme();
 }
@@ -2350,11 +2433,20 @@ function setupFullscreenListeners() {
 // Background globe instance
 let bgGlobe = null;
 
-// Initialize background globe for landing page
+// Initialize background globe for landing page (deferred so d3/globe load after idle)
 function initBackgroundGlobe() {
-    const bgGlobeContainer = document.getElementById('bg-globe-container');
-    if (bgGlobeContainer && typeof Globe !== 'undefined') {
-        bgGlobe = new Globe('bg-globe-container', []); // Empty visited countries for now
+    const cb = () => {
+        ensureD3AndGlobeLoaded().then(() => {
+            const bgGlobeContainer = document.getElementById('bg-globe-container');
+            if (bgGlobeContainer && typeof Globe !== 'undefined') {
+                bgGlobe = new Globe('bg-globe-container', []); // Empty visited countries for now
+            }
+        }).catch(() => {});
+    };
+    if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(cb, { timeout: 2000 });
+    } else {
+        setTimeout(cb, 300);
     }
 }
 
@@ -2766,17 +2858,24 @@ function initGlobeMapReveal() {
                         mapOverlay.classList.remove('hidden');
                     }
                     showLoadingScreen('Loading map…');
-                    requestAnimationFrame(() => {
-                        if (!isMapInitialized) {
-                            initMap();
-                        }
-                        if (map) {
-                            renderMarkers(() => {
-                                restoreMapView();
+                    ensureMapLibrariesLoaded().then(() => {
+                        requestAnimationFrame(() => {
+                            if (!isMapInitialized) {
+                                initMap();
+                            }
+                            if (map) {
+                                renderMarkers(() => {
+                                    restoreMapView();
+                                    hideLoadingScreen();
+                                });
+                            } else {
                                 hideLoadingScreen();
-                            });
-                        } else {
-                            hideLoadingScreen();
+                            }
+                        });
+                    }).catch(() => {
+                        hideLoadingScreen();
+                        if (typeof showShareToast === 'function') {
+                            showShareToast('Map library failed to load.', 'error');
                         }
                     });
                 }, { once: true });

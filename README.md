@@ -91,6 +91,7 @@ App behaviour is controlled by **`config.js`** (loaded before `script.js`). Edit
 |-----|---------|-------------|
 | `MARKER_CLUSTER_THRESHOLD` | 500 | Use marker clustering above this many map locations |
 | `HEATMAP_THRESHOLD` | 500 | Use heatmap layer above this many locations (single canvas) |
+| `PROBABILITY_THRESHOLD` | 0 | Min visit probability (0–1) to include when parsing; visits below are excluded (e.g. `0.2` to drop low-confidence places) |
 | `MARKER_BATCH_SIZE` | 200 | Markers added per frame when batching (keeps UI responsive) |
 | `SHARE_IMAGE_WIDTH` / `SHARE_IMAGE_HEIGHT` | 1080 × 1920 | Share image dimensions (fixed layout) |
 | `DATA_DEMO_URL` | `data/demo.json` | URL for demo data (e.g. “Try demo”) |

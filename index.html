@@ -16,6 +16,9 @@
     <!-- Material Icons (crossorigin so html-to-image can capture without SecurityError) -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" crossorigin="anonymous">
 
+    <!-- SEO: meta description for search result snippets -->
+    <meta name="description" content="Visualize your Google Timeline data with beautiful interactive maps and stats. 100% private and client-side.">
+
     <!-- Open Graph Meta Tags -->
     <meta property="og:title" content="Your Travel Recap" />
     <meta property="og:description"
@@ -735,8 +738,6 @@
             border-right-color: #fff;
         }
     </style>
-    <!-- HTML to Image -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
     <style>
         body {
             font-family: 'Outfit', sans-serif;
@@ -1218,12 +1219,12 @@
             transform: translate(-50%, -50%);
             width: 12px;
             height: 12px;
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%);
             border-radius: 50%;
             border: 2px solid white;
             box-shadow: 
-                0 2px 8px rgba(99, 102, 241, 0.65),
-                0 0 0 1px rgba(99, 102, 241, 0.25),
+                0 2px 8px rgba(59, 130, 246, 0.65),
+                0 0 0 1px rgba(59, 130, 246, 0.25),
                 0 1px 3px rgba(0, 0, 0, 0.15);
             transition: all 0.2s ease;
         }
@@ -1231,7 +1232,7 @@
         .map-marker-dot:hover .map-marker-inner {
             transform: translate(-50%, -50%) scale(1.3);
             box-shadow: 
-                0 4px 14px rgba(99, 102, 241, 0.7),
+                0 4px 14px rgba(59, 130, 246, 0.7),
                 0 2px 6px rgba(0, 0, 0, 0.2);
         }
         
@@ -1242,7 +1243,7 @@
             transform: translate(-50%, -50%);
             width: 12px;
             height: 12px;
-            background: rgba(99, 102, 241, 0.3);
+            background: rgba(59, 130, 246, 0.3);
             border-radius: 50%;
             animation: marker-pulse 2s ease-out infinite;
             pointer-events: none;
@@ -1261,15 +1262,15 @@
         
         /* Dark mode markers */
         body.dark .map-marker-inner {
-            background: linear-gradient(135deg, #818cf8 0%, #a78bfa 50%, #c084fc 100%);
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%);
             border-color: #1e293b;
             box-shadow: 
-                0 2px 8px rgba(129, 140, 248, 0.5),
+                0 2px 8px rgba(96, 165, 250, 0.5),
                 0 1px 2px rgba(0, 0, 0, 0.2);
         }
         
         body.dark .map-marker-pulse {
-            background: rgba(129, 140, 248, 0.3);
+            background: rgba(96, 165, 250, 0.3);
         }
         
         /* Leaflet popup styling */
@@ -1897,7 +1898,7 @@
         </svg>
         
         <!-- Compass rose hint -->
-        <svg class="absolute w-[300px] h-[300px] top-2/3 left-1/4 text-gray-400 dark:text-gray-500" viewBox="0 0 150 150" fill="none" stroke="currentColor" stroke-width="0.5">
+        <svg class="absolute w-[300px] h-[300px] top-2/3 left-1/4 text-gray-500 dark:text-gray-400" viewBox="0 0 150 150" fill="none" stroke="currentColor" stroke-width="0.5">
             <circle cx="75" cy="75" r="50" />
             <line x1="75" y1="20" x2="75" y2="130" />
             <line x1="20" y1="75" x2="130" y2="75" />
@@ -1922,7 +1923,7 @@
 
                 <!-- Theme Toggle -->
                 <div class="taskbar-section">
-                    <div class="theme-switch" id="theme-switch" role="tablist" aria-label="Theme toggle">
+                    <div class="theme-switch" id="theme-switch" role="group" aria-label="Theme toggle">
                         <button id="theme-light" class="theme-switch-btn" title="Light globe & map" aria-pressed="false">
                             <span class="material-icons-round text-base">light_mode</span>
                         </button>
@@ -1961,15 +1962,15 @@
 
     <!-- Persistent footer below taskbar -->
     <div class="fixed bottom-0 left-0 right-0 z-[290] pointer-events-none">
-        <p class="text-center text-gray-400 dark:text-gray-500 text-xs pb-1 flex items-center justify-center gap-1 flex-wrap">
+        <p class="text-center text-gray-600 dark:text-gray-400 text-xs pb-1 flex items-center justify-center gap-1 flex-wrap">
             <span class="pointer-events-auto">Built in India with ❤️ by
                 <a href="https://github.com/imarinzone"
                     class="underline hover:text-gray-600 dark:hover:text-gray-300">@imarinzone</a>
             </span>
-            <span class="pointer-events-auto text-gray-400 dark:text-gray-500">·</span>
+            <span class="pointer-events-auto text-gray-600 dark:text-gray-400">·</span>
             <span class="pointer-events-auto">
                 <a href="https://buymeacoffee.com/imarinzone" target="_blank" rel="noopener noreferrer"
-                    class="inline-flex items-center text-gray-400 dark:text-gray-500 hover:text-amber-500 dark:hover:text-amber-400 transition-colors"
+                    class="inline-flex items-center text-gray-600 dark:text-gray-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors"
                     title="Buy me a coffee">
                     <span class="material-icons-round text-base" aria-hidden="true">local_cafe</span>
                 </a>
@@ -2007,7 +2008,7 @@
         class="fixed top-20 left-0 w-[500px] h-[500px] z-0 opacity-0 transition-opacity duration-1000">
     </div>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-10 relative z-10">
+    <main id="main-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-10 relative z-10">
 
         <!-- Header -->
         <header class="text-center mb-12">
@@ -2015,7 +2016,7 @@
                 id="header-title">
                 My Travel Recap
             </h1>
-            <p class="text-lg text-slate-400 dark:text-gray-400 font-light max-w-2xl mx-auto" id="header-description">
+            <p class="text-lg text-slate-600 dark:text-gray-300 font-light max-w-2xl mx-auto" id="header-description">
                 Remember those cozy year-in-review emails from Google Maps? They quietly vanished when your location history moved onto your device. This little site brings that feeling back — your file stays on your machine, and everything is crunched right in your browser.
             </p>
         </header>
@@ -2032,7 +2033,7 @@
                     </svg>
                 </div>
                 <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">Load Your Data</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-6">
                     Upload your
                     <code
                         class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded cursor-pointer underline decoration-dotted underline-offset-2"
@@ -2055,7 +2056,7 @@
                     class="mt-4 w-full rounded-xl px-6 py-3 font-semibold text-blue-600 bg-white/80 hover:bg-white border border-blue-100 shadow-sm transition-colors">
                     Try a demo
                 </button>
-                <div id="upload-status" class="mt-4 text-sm font-medium text-gray-500 dark:text-gray-400 min-h-[20px]"></div>
+                <div id="upload-status" class="mt-4 text-sm font-medium text-gray-600 dark:text-gray-300 min-h-[20px]"></div>
             </div>
             <div id="how-to-timeline" class="mt-8 text-left glass rounded-3xl p-6 shadow-lg">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">How to get Google Timeline data</h3>
@@ -2092,7 +2093,7 @@
             <!-- Distance Story -->
             <section class="story-section min-h-[50vh] flex items-center justify-center py-16 opacity-0 scroll-trigger" id="story-distance">
                 <div class="text-center max-w-4xl mx-auto px-4">
-                    <p class="text-lg text-gray-500 dark:text-gray-400 mb-4 uppercase tracking-widest font-medium">Total Distance</p>
+                    <p class="text-lg text-gray-600 dark:text-gray-300 mb-4 uppercase tracking-widest font-medium">Total Distance</p>
                     <h2 class="story-headline text-6xl md:text-8xl font-black text-gray-900 dark:text-white leading-none mb-6" id="stat-distance">
                         0 km
                     </h2>
@@ -2105,7 +2106,7 @@
             <!-- Places & Countries Story -->
             <section class="story-section min-h-[50vh] flex items-center justify-center py-16 opacity-0 scroll-trigger" id="story-places">
                 <div class="text-center max-w-4xl mx-auto px-4">
-                    <p class="text-lg text-gray-500 dark:text-gray-400 mb-4 uppercase tracking-widest font-medium">Exploration</p>
+                    <p class="text-lg text-gray-600 dark:text-gray-300 mb-4 uppercase tracking-widest font-medium">Exploration</p>
                     <h2 class="story-headline text-5xl md:text-7xl font-black text-gray-900 dark:text-white leading-tight mb-6" id="stat-places">
                         <span id="stat-places-count">0</span> unique places
                     </h2>
@@ -2118,7 +2119,7 @@
             <!-- Total Visits Story -->
             <section class="story-section min-h-[40vh] flex items-center justify-center py-16 opacity-0 scroll-trigger" id="story-visits">
                 <div class="text-center max-w-4xl mx-auto px-4">
-                    <p class="text-lg text-gray-500 dark:text-gray-400 mb-4 uppercase tracking-widest font-medium">Check-ins</p>
+                    <p class="text-lg text-gray-600 dark:text-gray-300 mb-4 uppercase tracking-widest font-medium">Check-ins</p>
                     <h2 class="story-headline text-6xl md:text-8xl font-black text-gray-900 dark:text-white leading-none mb-6" id="stat-visits">
                         0
                     </h2>
@@ -2131,14 +2132,14 @@
             <!-- Time Distribution Story -->
             <section class="story-section min-h-[50vh] flex items-center justify-center py-16 opacity-0 scroll-trigger" id="story-time">
                 <div class="text-center max-w-4xl mx-auto px-4">
-                    <p class="text-lg text-gray-500 dark:text-gray-400 mb-4 uppercase tracking-widest font-medium">Time Spent</p>
+                    <p class="text-lg text-gray-600 dark:text-gray-300 mb-4 uppercase tracking-widest font-medium">Time Spent</p>
                     <div class="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
                         <div class="text-center">
                             <h2 class="story-headline text-5xl md:text-7xl font-black text-emerald-600 dark:text-emerald-400 leading-none" id="stat-time-moving">
                                 0
                             </h2>
                             <p class="text-lg text-emerald-600/70 dark:text-emerald-400/70 font-medium" id="stat-time-moving-unit">days</p>
-                            <p class="text-base text-gray-500 dark:text-gray-400 mt-1">on the move</p>
+                            <p class="text-base text-gray-600 dark:text-gray-300 mt-1">on the move</p>
                         </div>
                         <div class="text-gray-300 dark:text-gray-600 text-4xl font-extralight hidden md:block">|</div>
                         <div class="text-center">
@@ -2146,7 +2147,7 @@
                                 0
                             </h2>
                             <p class="text-lg text-indigo-600/70 dark:text-indigo-400/70 font-medium" id="stat-time-stationary-unit">days</p>
-                            <p class="text-base text-gray-500 dark:text-gray-400 mt-1">resting</p>
+                            <p class="text-base text-gray-600 dark:text-gray-300 mt-1">resting</p>
                         </div>
                     </div>
                 </div>
@@ -2155,7 +2156,7 @@
             <!-- How You Moved (Transport Breakdown) Story -->
             <section class="story-section min-h-[60vh] flex items-center justify-center py-16 opacity-0 scroll-trigger" id="story-transport">
                 <div class="text-center max-w-5xl mx-auto px-4">
-                    <p class="text-lg text-gray-500 dark:text-gray-400 mb-8 uppercase tracking-widest font-medium">How You Moved</p>
+                    <p class="text-lg text-gray-600 dark:text-gray-300 mb-8 uppercase tracking-widest font-medium">How You Moved</p>
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="stat-transport-grid">
                         <!-- Transport items will be dynamically added here -->
                     </div>
@@ -2165,7 +2166,7 @@
             <!-- Top Places Story -->
             <section class="story-section min-h-[60vh] flex items-center justify-center py-16 opacity-0 scroll-trigger" id="story-top-places">
                 <div class="text-center max-w-5xl mx-auto px-4">
-                    <p class="text-lg text-gray-500 dark:text-gray-400 mb-8 uppercase tracking-widest font-medium">Your Favorite Spots</p>
+                    <p class="text-lg text-gray-600 dark:text-gray-300 mb-8 uppercase tracking-widest font-medium">Your Favorite Spots</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="stat-top-places-grid">
                         <!-- Top places will be dynamically added here -->
                     </div>
@@ -2175,17 +2176,17 @@
             <!-- Records Story -->
             <section class="story-section min-h-[50vh] flex items-center justify-center py-16 opacity-0 scroll-trigger" id="story-records">
                 <div class="text-center max-w-4xl mx-auto px-4">
-                    <p class="text-lg text-gray-500 dark:text-gray-400 mb-8 uppercase tracking-widest font-medium">Personal Records</p>
+                    <p class="text-lg text-gray-600 dark:text-gray-300 mb-8 uppercase tracking-widest font-medium">Personal Records</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
                         <div>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Longest Drive</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Longest Drive</p>
                             <h3 class="text-4xl md:text-5xl font-black text-gray-900 dark:text-white" id="stat-longest-drive">0 km</h3>
-                            <p class="text-sm text-gray-400 dark:text-gray-500 mt-2" id="stat-longest-drive-date"></p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-2" id="stat-longest-drive-date"></p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Longest Walk</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Longest Walk</p>
                             <h3 class="text-4xl md:text-5xl font-black text-gray-900 dark:text-white" id="stat-longest-walk">0 km</h3>
-                            <p class="text-sm text-gray-400 dark:text-gray-500 mt-2" id="stat-longest-walk-date"></p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-2" id="stat-longest-walk-date"></p>
                         </div>
                     </div>
                 </div>
@@ -2213,9 +2214,9 @@
                             <span id="world-percentage"
                                 class="text-lg font-semibold text-gray-900 dark:text-white">0.0</span>
                             <span id="world-percentage-label"
-                                class="uppercase tracking-wide text-xs text-gray-500 dark:text-gray-400">Trips Around Earth</span>
+                                class="uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300">Trips Around Earth</span>
                         </div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mt-1" id="travel-description">
+                        <p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed mt-1" id="travel-description">
                             Analysis pending...
                         </p>
                     </div>
@@ -2226,7 +2227,7 @@
             <section class="hidden mt-16 bg-gray-900 rounded-3xl p-12 text-white shadow-2xl relative overflow-hidden opacity-0 scroll-trigger"
                 id="all-time-card" aria-hidden="true">
                 <div class="relative z-10 text-center">
-                    <p class="text-sm text-gray-400 uppercase tracking-widest mb-4">All-Time</p>
+                    <p class="text-sm text-gray-300 uppercase tracking-widest mb-4">All-Time</p>
                     <h2 class="text-4xl md:text-5xl font-bold mb-12">Lifetime Stats</h2>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 md:gap-16" id="all-time-stats">
                         <!-- Content populated by JS -->
@@ -2240,18 +2241,18 @@
                 <div class="space-y-3 text-sm text-gray-600 dark:text-gray-300">
                     <div class="flex items-baseline gap-2">
                         <span id="all-time-distance" class="text-lg font-semibold text-gray-900 dark:text-white">0 km</span>
-                        <span class="uppercase tracking-wide text-xs text-gray-500 dark:text-gray-400">Total Distance</span>
+                        <span class="uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300">Total Distance</span>
                     </div>
                     <div class="flex items-baseline gap-2">
                         <span id="all-time-visits" class="text-lg font-semibold text-gray-900 dark:text-white">0</span>
-                        <span class="uppercase tracking-wide text-xs text-gray-500 dark:text-gray-400">Total Visits</span>
+                        <span class="uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300">Total Visits</span>
                     </div>
                     <div class="flex items-baseline gap-2">
                         <span id="all-time-countries" class="text-lg font-semibold text-gray-900 dark:text-white">0</span>
-                        <span class="uppercase tracking-wide text-xs text-gray-500 dark:text-gray-400">Countries</span>
+                        <span class="uppercase tracking-wide text-xs text-gray-600 dark:text-gray-300">Countries</span>
                     </div>
                 </div>
-                <div id="globe-map-hint" class="mt-6 text-sm text-gray-500 dark:text-gray-400 opacity-0 transition-opacity duration-300">
+                <div id="globe-map-hint" class="mt-6 text-sm text-gray-600 dark:text-gray-300 opacity-0 transition-opacity duration-300">
                     Click the globe to open the map
                 </div>
             </div>
@@ -2291,7 +2292,7 @@
 
         </div>
 
-    </div>
+    </main>
 
     <!-- Share Dialog -->
     <section id="share-dialog" class="hidden fixed inset-0 z-[400] bg-black/40 backdrop-blur-sm">
@@ -2352,16 +2353,10 @@
       })();
     </script>
 
-    <!-- Scripts -->
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/rbush@3.0.1/rbush.min.js"></script>
+    <!-- Scripts (d3, leaflet, rbush, html-to-image, globe.js loaded on demand by script.js) -->
     <script src="config.js"></script>
     <script src="geodata-cache.js"></script>
     <script src="timeline-utils.js"></script>
-    <script src="components/globe.js"></script>
     <script src="script.js"></script>
 </body>
 

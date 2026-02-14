@@ -5,7 +5,7 @@
 importScripts('https://cdn.jsdelivr.net/npm/rbush@3.0.1/rbush.min.js', 'timeline-utils.js');
 
 self.onmessage = function (e) {
-    const { jsonText, countryGeoJSON } = e.data || {};
+    const { jsonText, countryGeoJSON, probabilityThreshold } = e.data || {};
     try {
         if (countryGeoJSON && typeof timelineUtils !== 'undefined' && timelineUtils.setCountryGeoJSON) {
             timelineUtils.setCountryGeoJSON(countryGeoJSON);
@@ -16,7 +16,8 @@ self.onmessage = function (e) {
             const hint = Array.isArray(json) ? ' (root array was empty)' : ` (expected semanticSegments or root array; got keys: ${Object.keys(json).slice(0, 5).join(', ')})`;
             throw new Error('Invalid JSON structure. No timeline segments found' + hint);
         }
-        const processed = timelineUtils.processTimelineData(json);
+        const options = probabilityThreshold != null ? { probabilityThreshold } : {};
+        const processed = timelineUtils.processTimelineData(json, options);
         const initialStats = timelineUtils.calculateStats(processed.allSegments);
         const payload = {
             allSegments: processed.allSegments,
